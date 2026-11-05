@@ -274,19 +274,26 @@ function standings(){
 function maxPoints(level){ return orderFor(level).reduce(function(s,i){ return s+LEVELS[QUESTIONS[i].lv].pts; },0); }
 
 /* ===== 데이터 가져오기 / 실시간 ===== */
+// 새로 받은 소식이 있으면 그보다 먼저 출발한 (오래된) 새로고침 결과는 버린다
+S.gen = 0;
 async function refresh(){
   if (!S.code) return;
+  var gen = S.gen;
   var res = await sb.from('quiz_rooms').select('*').eq('code', S.code).maybeSingle();
   if (res.error) { setOnline(false); return; }
   setOnline(true);
+  if (gen !== S.gen) return;
   if (!res.data) { S.room = null; render(); return; }
+  var r = res.data;
+  var out = await Promise.all([
+    sb.from('quiz_players').select('player_id,nickname,joined_at').eq('room', S.code).eq('round', r.round).order('joined_at'),
+    sb.from('quiz_answers').select('player_id,q_index,choice').eq('room', S.code).eq('round', r.round)
+  ]);
+  if (gen !== S.gen) return;
   var prevRound = S.room && S.room.round;
-  S.room = res.data;
-  var r = S.room;
-  var pr = await sb.from('quiz_players').select('player_id,nickname,joined_at').eq('room', S.code).eq('round', r.round).order('joined_at');
-  var ar = await sb.from('quiz_answers').select('player_id,q_index,choice').eq('room', S.code).eq('round', r.round);
-  if (!pr.error) S.players = pr.data;
-  if (!ar.error) S.answers = ar.data;
+  S.room = r;
+  if (!out[0].error) S.players = out[0].data;
+  if (!out[1].error) S.answers = out[1].data;
   // 학생: 새 판이 시작되면 같은 닉네임으로 자동 참여
   if (S.role==='player' && !S.players.some(function(p){ return p.player_id===S.me.id; })) {
     await registerPlayer();
@@ -294,15 +301,38 @@ async function refresh(){
   render(prevRound !== r.round);
 }
 var refreshTimer = null;
-function scheduleRefresh(){ clearTimeout(refreshTimer); refreshTimer = setTimeout(refresh, 250); }
+function scheduleRefresh(){ clearTimeout(refreshTimer); refreshTimer = setTimeout(refresh, 1200); }
+
+// 실시간 소식은 바로 화면에 반영하고, 잠시 뒤 전체를 한 번 맞춰 본다
+function onRoom(ev){
+  var n = ev && ev['new'];
+  if (n && n.code === S.code) {
+    S.gen++;
+    if (S.room && n.round !== S.room.round) { S.players = []; S.answers = []; S.room = n; refresh(); return; }
+    S.room = n; render();
+  }
+  scheduleRefresh();
+}
+function onRow(list, same){
+  return function(ev){
+    var n = ev && ev['new'];
+    if (n && S.room && n.round === S.room.round && !S[list].some(function(x){ return same(x, n); })) {
+      S.gen++;
+      S[list] = S[list].concat([n]); render();
+    }
+    scheduleRefresh();
+  };
+}
 
 function connect(){
   if (S.channel) sb.removeChannel(S.channel);
   var f = 'room=eq.' + S.code;
   S.channel = sb.channel('quiz-' + S.code)
-    .on('postgres_changes', {event:'*', schema:'public', table:'quiz_rooms', filter:'code=eq.'+S.code}, scheduleRefresh)
-    .on('postgres_changes', {event:'*', schema:'public', table:'quiz_players', filter:f}, scheduleRefresh)
-    .on('postgres_changes', {event:'*', schema:'public', table:'quiz_answers', filter:f}, scheduleRefresh)
+    .on('postgres_changes', {event:'*', schema:'public', table:'quiz_rooms', filter:'code=eq.'+S.code}, onRoom)
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'quiz_players', filter:f},
+        onRow('players', function(a,b){ return a.player_id===b.player_id; }))
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'quiz_answers', filter:f},
+        onRow('answers', function(a,b){ return a.player_id===b.player_id && a.q_index===b.q_index; }))
     .subscribe();
   clearInterval(S.poll);
   // 실시간 알림이 끊겨도 따라가도록 주기적으로 한 번씩 확인
