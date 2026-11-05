@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>실시간 미술 퀴즈</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+/* 레이아웃: 가운데 한 열. 선생님 화면은 프로젝터용으로 넓고 글자가 크고, 학생 화면은 휴대폰 한 손 크기.
+   색: '온라인 미술실'과 같은 푸른 회색 바탕, 칠판 초록, 분필 노랑. */
+:root{
+  --bg:#e8edf1; --surface:#f7f9fa; --ink:#1a2230; --muted:#566273; --line:#cbd5de;
+  --accent:#f2b705; --accent-ink:#1a2230;
+  --board:#2d5a4e; --board-edge:#7a5a36; --chalk:#f4f1e6; --chalk-dim:#bfd0c8;
+  --ok:#1d7a45; --ok-bg:#d9efe2; --bad:#b3362c; --bad-bg:#f6dedb;
+  --lv1:#1d7a45; --lv2:#a87800; --lv3:#b3362c;
+  --hover:#eef2f5;
+  --display:'Do Hyeon','Noto Sans KR',system-ui,sans-serif;
+  --body:'Noto Sans KR',system-ui,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#10151c; --surface:#19212b; --ink:#e8edf2; --muted:#9ba8b8; --line:#2d3a49;
+    --board:#234438; --board-edge:#5a4228; --chalk:#f1eee3; --chalk-dim:#a9bdb4;
+    --ok:#56c987; --ok-bg:#1c3a2a; --bad:#f08a80; --bad-bg:#3d2220;
+    --lv1:#56c987; --lv2:#f2b705; --lv3:#f08a80;
+    --hover:#212b37;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:var(--body); font-size:16px; line-height:1.6;
+  padding-top:max(20px,env(safe-area-inset-top,0px));
+  padding-bottom:max(40px,env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+[hidden]{display:none!important}
+.wrap{max-width:760px;margin:0 auto;display:grid;gap:18px}
+#view{display:grid;gap:16px;min-width:0}
+.board{margin-bottom:8px}
+body.host .wrap{max-width:1100px}
+h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance;letter-spacing:.01em}
+h1{font-size:clamp(28px,5.5vw,40px);line-height:1.15}
+h2{font-size:24px}
+p{margin:0}
+.lead{color:var(--muted)}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.tag{font-size:14px;color:var(--muted)}
+.tag b{color:var(--ink)}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:grid;gap:12px}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:640px){.two{grid-template-columns:1fr}}
+label{display:grid;gap:4px;font-size:14px;color:var(--muted)}
+input,select{
+  width:100%;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);
+  padding:10px 12px;font-size:18px;color:var(--ink);
+}
+input.code{font-family:var(--display);font-size:32px;letter-spacing:.2em;text-align:center}
+.err{color:var(--bad);font-size:14px;min-height:1.4em}
+
+.btn{
+  border:none;border-radius:10px;padding:12px 20px;font-weight:700;font-size:17px;
+  background:var(--accent);color:var(--accent-ink);
+}
+.btn:hover{filter:brightness(1.05)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink);font-weight:500}
+.btn.big{font-size:22px;padding:16px 28px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+
+/* 칠판 */
+.board{
+  background:var(--board);color:var(--chalk);
+  border:10px solid var(--board-edge);border-radius:6px;
+  padding:22px 22px 26px;position:relative;
+  box-shadow:inset 0 0 40px rgba(0,0,0,.25);
+}
+.board::after{content:"";position:absolute;left:12%;right:12%;bottom:-16px;height:6px;background:var(--board-edge);border-radius:0 0 4px 4px}
+.qmeta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:14px;color:var(--chalk-dim);margin-bottom:10px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid currentColor;border-radius:999px;padding:1px 10px;font-size:13px}
+.chip.l1{color:#9fe3bb}.chip.l2{color:#ffd65c}.chip.l3{color:#ffaca3}
+.dots{display:inline-flex;gap:3px}
+.dots i{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.25}
+.dots i.on{opacity:1}
+.qtext{font-family:var(--display);font-size:clamp(22px,4.4vw,30px);line-height:1.35;text-wrap:pretty}
+body.host .qtext{font-size:clamp(28px,4vw,44px)}
+.bigcode{font-family:var(--display);font-size:clamp(64px,14vw,120px);line-height:1;letter-spacing:.12em;color:var(--chalk)}
+
+/* 보기 */
+.choices{display:grid;gap:10px}
+.choices.ox{grid-template-columns:1fr 1fr}
+body.host .choices:not(.ox){grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:640px){body.host .choices:not(.ox){grid-template-columns:1fr}}
+.choice{
+  text-align:left;background:var(--surface);border:2px solid var(--line);border-radius:10px;
+  padding:14px;display:flex;align-items:center;gap:12px;font-size:18px;min-width:0;position:relative;overflow:hidden;
+}
+button.choice:hover:not(:disabled){background:var(--hover);border-color:var(--muted)}
+.choice:disabled{cursor:default}
+.choice .key{flex:none;width:30px;height:30px;border-radius:50%;border:1.5px solid var(--muted);display:grid;place-items:center;font-size:14px;font-weight:700;color:var(--muted)}
+.choice .label{min-width:0;position:relative}
+.choices.ox .choice{justify-content:center;font-family:var(--display);font-size:56px;padding:18px;line-height:1}
+.choices.ox .choice .key{display:none}
+.choice.right{border-color:var(--ok);background:var(--ok-bg)}
+.choice.wrong{border-color:var(--bad);background:var(--bad-bg)}
+.choice.mine{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.choice.dim{opacity:.5}
+.choice .bar{position:absolute;inset:0 auto 0 0;background:var(--line);opacity:.55;transition:width .4s}
+.choice.right .bar{background:var(--ok);opacity:.22}
+.choice .count{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:700;position:relative;font-family:var(--body);font-size:18px}
+.choices.ox .choice .count{position:absolute;right:14px;bottom:10px}
+.swatches{display:inline-flex;gap:4px;flex:none;position:relative}
+.swatches i{width:18px;height:18px;border-radius:50%;border:1px solid rgba(0,0,0,.15)}
+
+.feedback{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:6px}
+.feedback h3{font-size:24px}
+.feedback.ok h3{color:var(--ok)}
+.feedback.bad h3{color:var(--bad)}
+.feedback p{max-width:65ch}
+
+.status{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;color:var(--muted)}
+.status b{color:var(--ink);font-variant-numeric:tabular-nums;font-size:20px}
+
+.names{display:flex;flex-wrap:wrap;gap:6px}
+.name{border:1px solid var(--line);border-radius:999px;padding:3px 12px;font-size:15px;background:var(--bg)}
+.name.done{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+.lb{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.lb li{display:grid;grid-template-columns:2.5em minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+.lb .r{font-family:var(--display);font-size:22px;color:var(--muted);text-align:center}
+.lb li:nth-child(1) .r{color:var(--accent)}
+.lb .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.lb .s{font-variant-numeric:tabular-nums;font-weight:700}
+.lb li.me{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+
+.lobby{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:center}
+@media (max-width:640px){.lobby{grid-template-columns:1fr}}
+.qr{background:#fff;padding:10px;border-radius:8px;width:max-content;max-width:100%}
+.qr img,.qr canvas{display:block;max-width:100%}
+.url{font-size:14px;color:var(--chalk-dim);word-break:break-all}
+.levels{display:flex;flex-wrap:wrap;gap:8px}
+.lvbtn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px;display:inline-flex;align-items:center;gap:8px;font-size:15px}
+.lvbtn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+.wait{display:grid;gap:8px;justify-items:center;text-align:center;padding:32px 16px}
+.spinner{width:36px;height:36px;border-radius:50%;border:4px solid rgba(255,255,255,.2);border-top-color:var(--accent)}
+@media (prefers-reduced-motion:no-preference){
+  .spinner{animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:2px 6px}
+.small{font-size:14px;color:var(--muted)}
+.net{font-size:13px;color:var(--muted)}
+.net.off{color:var(--bad)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <h1>실시간 미술 퀴즈</h1>
+    <span class="tag" id="who"></span>
+  </div>
+  <main id="view"></main>
+</div>
+
+<script>
+/* ===== 설정: Supabase 프로젝트 주소와 anon(공개) 키를 넣으세요 ===== */
+var CONFIG = { SUPABASE_URL: 'https://YOUR-PROJECT.supabase.co', SUPABASE_ANON_KEY: 'YOUR-ANON-KEY' };
+
+var LEVELS = {1:{name:'기초',pts:1},2:{name:'보통',pts:2},3:{name:'도전',pts:3}};
+var LEVEL_LABEL = {0:'전체 10문제',1:'기초만',2:'보통만',3:'도전만'};
+var KEYS = ['①','②','③','④'];
+
+// type: 'ox' 이면 answer는 'O' 또는 'X', 'mc' 이면 보기 번호(0부터)
+var QUESTIONS = [
+  {lv:1,type:'ox',q:'색의 3속성은 색상, 명도, 채도이다.',answer:'O',
+   why:'색상은 빨강·파랑 같은 색의 이름, 명도는 밝고 어두운 정도, 채도는 맑고 탁한 정도입니다.'},
+  {lv:1,type:'mc',q:'물감(색료)의 삼원색으로 알맞은 것은?',
+   options:[
+     {t:'빨강 · 초록 · 파랑',sw:['#e53935','#43a047','#1e63d6']},
+     {t:'자주(마젠타) · 노랑 · 청록(시안)',sw:['#e0218a','#ffd400','#00a3e0']},
+     {t:'주황 · 초록 · 보라',sw:['#f57c00','#43a047','#7b3fa0']},
+     {t:'검정 · 흰색 · 회색',sw:['#1a1a1a','#ffffff','#9e9e9e']}],
+   answer:1,why:'색료의 삼원색은 자주·노랑·청록이고, 섞을수록 어두워집니다(감산 혼합). 빨강·초록·파랑은 빛의 삼원색입니다.'},
+  {lv:1,type:'ox',q:'보색끼리 섞으면 더 밝고 선명한 색이 된다.',answer:'X',
+   why:'보색 물감을 섞으면 회색이나 검정에 가까운 탁한 색이 됩니다. 대신 나란히 놓으면 서로를 더 선명하게 보이게 합니다(보색 대비).'},
+  {lv:2,type:'mc',q:'멀리 있는 산을 흐리고 푸르스름하게 그려 거리감을 나타내는 방법은?',
+   options:[{t:'선 원근법'},{t:'공기(대기) 원근법'},{t:'역원근법'},{t:'다시점'}],answer:1,
+   why:'공기 원근법은 공기층 때문에 먼 것일수록 색이 옅고 푸르게, 윤곽은 흐리게 보이는 현상을 이용합니다. 선 원근법은 소실점을 향해 선이 모이는 방법입니다.'},
+  {lv:2,type:'mc',q:'같은 모양이나 색을 규칙적으로 되풀이해 율동감을 주는 조형 원리는?',
+   options:[{t:'대비'},{t:'강조'},{t:'반복'},{t:'비례'}],answer:2,
+   why:'반복은 같은 요소를 되풀이해 리듬과 통일감을 줍니다. 대비는 서로 다른 성질을 맞세우는 것, 강조는 한 부분을 두드러지게 하는 것입니다.'},
+  {lv:2,type:'ox',q:'고무판화(볼록판화)를 찍으면 판에 새긴 그림과 좌우가 바뀌어 나온다.',answer:'O',
+   why:'판화는 판을 종이에 엎어 찍기 때문에 좌우가 뒤집힙니다. 글자를 넣을 때는 판에 거꾸로 새겨야 합니다.'},
+  {lv:2,type:'mc',q:'〈씨름〉, 〈서당〉처럼 조선 후기 서민들의 생활 모습을 생생하게 그린 화가는?',
+   options:[{t:'김홍도'},{t:'정선'},{t:'안견'},{t:'신사임당'}],answer:0,
+   why:'단원 김홍도는 간결한 선으로 서민의 일상을 그린 풍속화로 유명합니다. 안견은 〈몽유도원도〉, 신사임당은 초충도로 알려져 있습니다.'},
+  {lv:3,type:'mc',q:'대상을 여러 방향에서 본 모습을 조각내어 한 화면에 함께 표현한 미술 사조는?',
+   options:[{t:'인상주의'},{t:'야수주의'},{t:'입체주의'},{t:'초현실주의'}],answer:2,
+   why:'피카소와 브라크가 이끈 입체주의는 하나의 시점에서 벗어나 여러 시점을 한 화면에 겹쳐 그렸습니다. 대표작으로 피카소의 〈아비뇽의 처녀들〉이 있습니다.'},
+  {lv:3,type:'mc',q:'빛에 따라 달라지는 순간의 색을 담으려고 건초더미와 루앙 대성당을 시간대별로 여러 번 그린 화가는?',
+   options:[{t:'빈센트 반 고흐'},{t:'클로드 모네'},{t:'살바도르 달리'},{t:'피트 몬드리안'}],answer:1,
+   why:'모네는 인상주의의 대표 화가로, 같은 대상을 아침·한낮·저녁 빛 아래에서 연작으로 그렸습니다. 인상주의라는 이름도 그의 〈인상, 해돋이〉에서 나왔습니다.'},
+  {lv:3,type:'ox',q:'겸재 정선의 〈인왕제색도〉는 중국의 산수를 상상해서 그린 관념 산수화이다.',answer:'X',
+   why:'〈인왕제색도〉는 비 갠 뒤의 인왕산을 직접 보고 그린 진경산수화입니다. 정선은 우리 산천을 실제 모습대로 그리는 진경산수를 이끌었습니다.'}
+];
+
+/* ===== 공통 도우미 ===== */
+var configured = CONFIG.SUPABASE_URL.indexOf('YOUR-') === -1 && CONFIG.SUPABASE_ANON_KEY.indexOf('YOUR-') === -1;
+var sb = (configured && window.supabase) ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY) : null;
+var view = document.getElementById('view');
+var params = new URLSearchParams(location.search);
+
+function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function load(k){ try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } }
+function save(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+function drop(k){ try { localStorage.removeItem(k); } catch(e){} }
+function uuid(){
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c){ var r=Math.random()*16|0; return (c==='x'?r:(r&3|8)).toString(16); });
+}
+function dots(lv){ return '<span class="dots">'+[1,2,3].map(function(n){ return '<i class="'+(n<=lv?'on':'')+'"></i>'; }).join('')+'</span>'; }
+function orderFor(level){ return QUESTIONS.map(function(_,i){return i;}).filter(function(i){ return !level || QUESTIONS[i].lv===level; }); }
+function joinUrl(code){ return location.origin + location.pathname + '?room=' + code; }
+function errText(e){ return (e && (e.message || e.error_description)) || '연결에 문제가 생겼어요. 잠시 뒤 다시 해 보세요.'; }
+
+var S = {
+  role:null,       // 'host' | 'player'
+  code:null, pin:null,
+  me:{ id: load('lq_player_id') || (function(){ var id=uuid(); save('lq_player_id', id); return id; })(), nick:'' },
+  room:null, players:[], answers:[],
+  lastKey:'', channel:null, poll:null, online:true, busy:false
+};
+
+/* ===== 점수 계산 ===== */
+function revealedUpTo(){ // 몇 번째 문제까지 정답이 공개됐는지(이 값 미만의 q_index는 공개)
+  var r = S.room; if(!r) return 0;
+  if (r.phase==='end') return Infinity;
+  if (r.phase==='reveal') return r.idx+1;
+  if (r.phase==='question') return r.idx;
+  return 0;
+}
+function isCorrect(a, order){
+  var qi = order[a.q_index]; if (qi==null) return false;
+  return String(QUESTIONS[qi].answer) === a.choice;
+}
+function standings(){
+  var r = S.room, order = orderFor(r.level), upto = revealedUpTo(), map = {};
+  S.players.forEach(function(p){ map[p.player_id] = {id:p.player_id, nick:p.nickname, score:0, right:0}; });
+  S.answers.forEach(function(a){
+    if (a.q_index >= upto) return;
+    var m = map[a.player_id]; if (!m) return;
+    if (isCorrect(a, order)) { m.score += LEVELS[QUESTIONS[order[a.q_index]].lv].pts; m.right++; }
+  });
+  var list = Object.keys(map).map(function(k){ return map[k]; });
+  list.sort(function(a,b){ return b.score-a.score || a.nick.localeCompare(b.nick,'ko'); });
+  list.forEach(function(p){ p.rank = 1 + list.filter(function(q){ return q.score > p.score; }).length; });
+  return list;
+}
+function maxPoints(level){ return orderFor(level).reduce(function(s,i){ return s+LEVELS[QUESTIONS[i].lv].pts; },0); }
+
+/* ===== 데이터 가져오기 / 실시간 ===== */
+async function refresh(){
+  if (!S.code) return;
+  var res = await sb.from('quiz_rooms').select('*').eq('code', S.code).maybeSingle();
+  if (res.error) { setOnline(false); return; }
+  setOnline(true);
+  if (!res.data) { S.room = null; render(); return; }
+  var prevRound = S.room && S.room.round;
+  S.room = res.data;
+  var r = S.room;
+  var pr = await sb.from('quiz_players').select('player_id,nickname,joined_at').eq('room', S.code).eq('round', r.round).order('joined_at');
+  var ar = await sb.from('quiz_answers').select('player_id,q_index,choice').eq('room', S.code).eq('round', r.round);
+  if (!pr.error) S.players = pr.data;
+  if (!ar.error) S.answers = ar.data;
+  // 학생: 새 판이 시작되면 같은 닉네임으로 자동 참여
+  if (S.role==='player' && !S.players.some(function(p){ return p.player_id===S.me.id; })) {
+    await registerPlayer();
+  }
+  render(prevRound !== r.round);
+}
+var refreshTimer = null;
+function scheduleRefresh(){ clearTimeout(refreshTimer); refreshTimer = setTimeout(refresh, 250); }
+
+function connect(){
+  if (S.channel) sb.removeChannel(S.channel);
+  var f = 'room=eq.' + S.code;
+  S.channel = sb.channel('quiz-' + S.code)
+    .on('postgres_changes', {event:'*', schema:'public', table:'quiz_rooms', filter:'code=eq.'+S.code}, scheduleRefresh)
+    .on('postgres_changes', {event:'*', schema:'public', table:'quiz_players', filter:f}, scheduleRefresh)
+    .on('postgres_changes', {event:'*', schema:'public', table:'quiz_answers', filter:f}, scheduleRefresh)
+    .subscribe();
+  clearInterval(S.poll);
+  // 실시간 알림이 끊겨도 따라가도록 주기적으로 한 번씩 확인
+  S.poll = setInterval(refresh, S.role==='host' ? 3000 : 4000);
+  refresh();
+}
+function setOnline(v){
+  if (S.online === v) return;
+  S.online = v; var n = document.getElementById('net');
+  if (n) { n.className = 'net' + (v?'':' off'); n.textContent = v ? '' : '연결이 불안정해요. 다시 연결하는 중…'; }
+}
+
+/* ===== 학생 ===== */
+async function registerPlayer(){
+  var ins = await sb.from('quiz_players').insert({ room:S.code, round:S.room.round, player_id:S.me.id, nickname:S.me.nick });
+  if (ins.error && ins.error.code !== '23505') throw ins.error;
+}
+async function joinAsPlayer(code, nick){
+  var res = await sb.from('quiz_rooms').select('*').eq('code', code).maybeSingle();
+  if (res.error) throw res.error;
+  if (!res.data) throw new Error('그 방 번호는 없어요. 화면의 번호를 다시 확인해 주세요.');
+  S.role='player'; S.code=code; S.me.nick=nick; S.room=res.data;
+  await registerPlayer();
+  save('lq_player', {code:code, nick:nick});
+  history.replaceState(null, '', '?room=' + code);
+  connect();
+}
+async function answer(choice){
+  if (S.busy) return;
+  var r = S.room; S.busy = true;
+  // 바로 반영해서 화면이 빨리 바뀌게
+  S.answers = S.answers.concat([{player_id:S.me.id, q_index:r.idx, choice:String(choice)}]);
+  render(true);
+  var ins = await sb.from('quiz_answers').insert({ room:S.code, round:r.round, player_id:S.me.id, q_index:r.idx, choice:String(choice) });
+  S.busy = false;
+  if (ins.error && ins.error.code !== '23505') {
+    S.answers = S.answers.filter(function(a){ return !(a.player_id===S.me.id && a.q_index===r.idx); });
+    alertBox('답을 보내지 못했어요. 이미 정답이 공개됐을 수 있어요.');
+  }
+  scheduleRefresh();
+}
+var alertMsg = '';
+function alertBox(m){ alertMsg = m; render(true); setTimeout(function(){ alertMsg=''; render(true); }, 3500); }
+
+/* ===== 선생님 ===== */
+async function createRoom(pin, level){
+  var res = await sb.rpc('quiz_create_room', { p_pin:pin, p_level:level });
+  if (res.error) throw res.error;
+  enterHost(res.data, pin);
+}
+async function rejoinHost(code, pin){
+  var res = await sb.rpc('quiz_check_pin', { p_code:code, p_pin:pin });
+  if (res.error) throw res.error;
+  if (!res.data) throw new Error('방 번호나 PIN이 맞지 않아요.');
+  enterHost(code, pin);
+}
+function enterHost(code, pin){
+  S.role='host'; S.code=code; S.pin=pin;
+  save('lq_host', {code:code, pin:pin});
+  history.replaceState(null, '', '?room=' + code + '&host');
+  document.body.classList.add('host');
+  connect();
+}
+async function control(patch){
+  if (S.busy) return;
+  var r = Object.assign({}, S.room, patch);
+  S.busy = true;
+  var res = await sb.rpc('quiz_control', { p_code:S.code, p_pin:S.pin, p_phase:r.phase, p_idx:r.idx, p_level:r.level, p_round:r.round });
+  S.busy = false;
+  if (res.error) { alertBox(errText(res.error)); return; }
+  S.room = Object.assign(S.room, patch, {updated_at:new Date().toISOString()});
+  if (patch.round) { S.players = []; S.answers = []; }
+  render(true); scheduleRefresh();
+}
+
+/* ===== 화면 ===== */
+function render(force){
+  var key = JSON.stringify([S.role, S.room, S.players, S.answers, alertMsg]);
+  if (!force && key === S.lastKey) return;
+  S.lastKey = key;
+  var who = document.getElementById('who');
+  if (S.role==='host') who.innerHTML = '선생님 화면 · 방 <b>'+esc(S.code)+'</b>';
+  else if (S.role==='player') who.innerHTML = '<b>'+esc(S.me.nick)+'</b> · 방 '+esc(S.code);
+  else who.textContent = '';
+
+  if (!sb) { view.innerHTML = setupHTML(); return; }
+  if (!S.role) { renderHome(); return; }
+  if (!S.room) { view.innerHTML = goneHTML(); bindGone(); return; }
+  view.innerHTML = (S.role==='host' ? hostHTML() : playerHTML())
+    + (alertMsg ? '<p class="err" role="alert">'+esc(alertMsg)+'</p>' : '')
+    + '<p class="net'+(S.online?'':' off')+'" id="net">'+(S.online?'':'연결이 불안정해요. 다시 연결하는 중…')+'</p>';
+  if (S.role==='host') bindHost(); else bindPlayer();
+}
+
+function setupHTML(){
+  return '<section class="panel"><h2>처음 한 번만 설정이 필요해요</h2>'
+    + '<p>이 페이지는 Supabase에 연결해야 동작해요. <span class="mono">live.html</span> 위쪽의 <span class="mono">CONFIG</span>에 프로젝트 주소와 anon 키를 넣고, <span class="mono">supabase/live-quiz.sql</span>을 SQL Editor에서 한 번 실행해 주세요.</p>'
+    + (!window.supabase ? '<p class="err">Supabase 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</p>' : '')
+    + '</section>';
+}
+function goneHTML(){
+  return '<section class="panel"><h2>방이 사라졌어요</h2><p class="lead">하루가 지나 정리됐거나 번호가 바뀌었어요.</p>'
+    + '<div class="actions"><button class="btn" id="home">처음으로</button></div></section>';
+}
+function bindGone(){ document.getElementById('home').onclick = leave; }
+function leave(){
+  if (S.channel) sb.removeChannel(S.channel);
+  clearInterval(S.poll);
+  S.role=null; S.code=null; S.room=null; S.players=[]; S.answers=[];
+  document.body.classList.remove('host');
+  history.replaceState(null, '', location.pathname);
+  render(true);
+}
+
+function renderHome(){
+  var saved = load('lq_player') || {};
+  var host = load('lq_host');
+  var room = params.get('room') || saved.code || '';
+  view.innerHTML =
+    '<p class="lead">선생님 화면에 문제가 뜨면 휴대폰이나 태블릿으로 함께 풀어요.</p>'
+    + '<div class="two">'
+    + '<form class="panel" id="joinForm" autocomplete="off"><h2>학생으로 참여</h2>'
+    +   '<label for="jCode">방 번호</label><input class="code" id="jCode" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" required value="'+esc(room)+'">'
+    +   '<label for="jNick">닉네임 (12자까지)</label><input id="jNick" maxlength="12" required value="'+esc(saved.nick||'')+'" placeholder="예: 3번 김미술">'
+    +   '<p class="err" id="jErr"></p>'
+    +   '<div class="actions"><button class="btn big" type="submit">들어가기</button></div></form>'
+    + '<div class="panel"><h2>선생님으로 시작</h2>'
+    +   '<form id="hostForm" style="display:grid;gap:10px">'
+    +   '<label for="hPin">선생님 PIN (4자리 이상, 진행할 때 필요해요)</label><input id="hPin" type="password" inputmode="numeric" minlength="4" required>'
+    +   '<label for="hLevel">문제 범위</label><select id="hLevel">'
+    +     [0,1,2,3].map(function(l){ return '<option value="'+l+'">'+LEVEL_LABEL[l]+'</option>'; }).join('')
+    +   '</select>'
+    +   '<p class="err" id="hErr"></p>'
+    +   '<div class="actions"><button class="btn" type="submit">새 방 만들기</button></div></form>'
+    +   (host ? '<div class="actions" style="justify-content:space-between;border-top:1px solid var(--line);padding-top:12px">'
+              + '<span class="small">지난 방 <b>'+esc(host.code)+'</b>으로 돌아가기</span>'
+              + '<button class="btn ghost" id="hBack">이어서 진행</button></div>' : '')
+    + '</div></div>';
+
+  document.getElementById('joinForm').onsubmit = async function(e){
+    e.preventDefault();
+    var code = document.getElementById('jCode').value.trim(), nick = document.getElementById('jNick').value.trim();
+    var err = document.getElementById('jErr');
+    if (!/^\d{4}$/.test(code)) { err.textContent = '방 번호 4자리를 넣어 주세요.'; return; }
+    if (!nick) { err.textContent = '닉네임을 넣어 주세요.'; return; }
+    err.textContent = '들어가는 중…';
+    try { await joinAsPlayer(code, nick); } catch(x){ err.textContent = errText(x); }
+  };
+  document.getElementById('hostForm').onsubmit = async function(e){
+    e.preventDefault();
+    var pin = document.getElementById('hPin').value.trim(), lv = +document.getElementById('hLevel').value;
+    var err = document.getElementById('hErr');
+    if (pin.length < 4) { err.textContent = 'PIN은 4자리 이상으로 정해 주세요.'; return; }
+    err.textContent = '방을 만드는 중…';
+    try { await createRoom(pin, lv); } catch(x){ err.textContent = errText(x); }
+  };
+  var back = document.getElementById('hBack');
+  if (back) back.onclick = async function(){
+    try { await rejoinHost(host.code, host.pin); }
+    catch(x){ drop('lq_host'); document.getElementById('hErr').textContent = errText(x); back.closest('.actions').remove(); }
+  };
+}
+
+/* --- 문제 칠판 --- */
+function boardHTML(Q, n, total){
+  return '<section class="board"><div class="qmeta">'
+    + '<span class="chip l'+Q.lv+'">'+dots(Q.lv)+' '+LEVELS[Q.lv].name+' · '+LEVELS[Q.lv].pts+'점</span>'
+    + '<span>'+(Q.type==='ox'?'O / X':'객관식')+'</span><span>'+(n+1)+' / '+total+'</span></div>'
+    + '<p class="qtext">'+esc(Q.q)+'</p></section>';
+}
+function optionList(Q){
+  return Q.type==='ox'
+    ? [{v:'O',t:'O',key:''},{v:'X',t:'X',key:''}]
+    : Q.options.map(function(o,i){ return {v:String(i), t:o.t, key:KEYS[i], sw:o.sw}; });
+}
+function swHTML(sw){ return sw ? '<span class="swatches" aria-hidden="true">'+sw.map(function(c){ return '<i style="background:'+c+'"></i>'; }).join('')+'</span>' : ''; }
+
+/* --- 선생님 화면 --- */
+function hostHTML(){
+  var r = S.room, order = orderFor(r.level), total = order.length;
+  var players = S.players, n = players.length;
+
+  if (r.phase==='lobby') {
+    return '<section class="board"><div class="lobby"><div style="display:grid;gap:8px;min-width:0">'
+      + '<span class="qmeta" style="margin:0">방 번호</span><div class="bigcode">'+esc(S.code)+'</div>'
+      + '<p class="url">'+esc(joinUrl(S.code))+'</p></div>'
+      + '<div class="qr" id="qr" aria-label="참여 QR 코드"></div></div></section>'
+      + '<div class="panel"><div class="status"><span>들어온 학생 <b>'+n+'</b>명</span>'
+      + '<div class="levels" role="group" aria-label="문제 범위">'
+      + [0,1,2,3].map(function(l){ return '<button class="lvbtn" data-lv="'+l+'" aria-pressed="'+(r.level===l)+'">'+(l?dots(l):'')+LEVEL_LABEL[l]+'</button>'; }).join('')
+      + '</div></div>'
+      + '<div class="names">'+(n ? players.map(function(p){ return '<span class="name">'+esc(p.nickname)+'</span>'; }).join('') : '<span class="small">학생들이 QR을 찍거나 방 번호를 입력하면 여기에 이름이 떠요.</span>')+'</div></div>'
+      + '<div class="actions"><button class="btn ghost" id="leave">나가기</button><button class="btn big" id="start" '+(n?'':'disabled')+'>'+total+'문제 시작하기</button></div>';
+  }
+
+  if (r.phase==='end') {
+    var st = standings(), max = maxPoints(r.level);
+    return '<section class="board"><div class="qmeta">최종 결과 · '+LEVEL_LABEL[r.level]+' · '+max+'점 만점</div>'
+      + '<p class="qtext">'+(st.length ? '1등은 '+esc(st.filter(function(p){return p.rank===1;}).map(function(p){return p.nick;}).join(', '))+' ('+st[0].score+'점)' : '참여한 학생이 없어요')+'</p></section>'
+      + leaderboardHTML(st, 100)
+      + '<div class="actions"><button class="btn ghost" id="leave">나가기</button><button class="btn" id="again">새 판 시작</button></div>';
+  }
+
+  var Q = QUESTIONS[order[r.idx]];
+  var cur = S.answers.filter(function(a){ return a.q_index===r.idx; });
+  var answered = {}; cur.forEach(function(a){ answered[a.player_id] = a.choice; });
+  var count = {}; cur.forEach(function(a){ count[a.choice] = (count[a.choice]||0)+1; });
+  var reveal = r.phase==='reveal';
+  var opts = optionList(Q).map(function(o){
+    var c = count[o.v]||0, pct = cur.length ? Math.round(c/cur.length*100) : 0;
+    var cls = 'choice' + (reveal ? (o.v===String(Q.answer) ? ' right' : ' dim') : '');
+    return '<div class="'+cls+'">'+(reveal?'<span class="bar" style="width:'+pct+'%"></span>':'')
+      + '<span class="key">'+o.key+'</span><span class="label">'+esc(o.t)+'</span>'+swHTML(o.sw)
+      + (reveal?'<span class="count">'+c+'명</span>':'')+'</div>';
+  }).join('');
+  var html = boardHTML(Q, r.idx, total)
+    + '<div class="choices'+(Q.type==='ox'?' ox':'')+'">'+opts+'</div>';
+  if (!reveal) {
+    html += '<div class="panel"><div class="status"><span>답한 학생 <b>'+cur.length+' / '+n+'</b></span></div>'
+      + '<div class="names">'+players.map(function(p){ return '<span class="name'+(answered[p.player_id]?' done':'')+'">'+esc(p.nickname)+'</span>'; }).join('')+'</div></div>'
+      + '<div class="actions"><button class="btn big" id="reveal">정답 공개</button></div>';
+  } else {
+    var right = count[String(Q.answer)]||0;
+    html += '<div class="feedback ok"><h3>정답: '+(Q.type==='ox'?Q.answer:KEYS[Q.answer]+' '+esc(Q.options[Q.answer].t))
+      + ' · '+right+'명 맞힘</h3><p>'+esc(Q.why)+'</p></div>'
+      + '<h2>지금 순위</h2>' + leaderboardHTML(standings(), 5)
+      + '<div class="actions"><button class="btn big" id="next">'+(r.idx+1<total?'다음 문제':'최종 결과 보기')+'</button></div>';
+  }
+  return html;
+}
+function leaderboardHTML(st, limit){
+  if (!st.length) return '<p class="small">아직 참여한 학생이 없어요.</p>';
+  return '<ol class="lb">'+st.slice(0,limit).map(function(p){
+    return '<li class="'+(p.id===S.me.id && S.role==='player'?'me':'')+'"><span class="r">'+p.rank+'</span><span class="n">'+esc(p.nick)+'</span><span class="s">'+p.score+'점</span></li>';
+  }).join('')+'</ol>';
+}
+function bindHost(){
+  var r = S.room, total = orderFor(r.level).length;
+  var q = document.getElementById('qr');
+  if (q && !window.QRCode) q.hidden = true;
+  if (q && window.QRCode) { new QRCode(q, {text:joinUrl(S.code), width:200, height:200, correctLevel:QRCode.CorrectLevel.M}); }
+  var on = function(id, fn){ var el = document.getElementById(id); if (el) el.onclick = fn; };
+  on('leave', leave);
+  on('start', function(){ control({phase:'question', idx:0}); });
+  on('reveal', function(){ control({phase:'reveal'}); });
+  on('next', function(){ control(r.idx+1<total ? {phase:'question', idx:r.idx+1} : {phase:'end'}); });
+  on('again', function(){ control({phase:'lobby', idx:0, round:r.round+1}); });
+  view.querySelectorAll('.lvbtn').forEach(function(b){ b.onclick = function(){ control({level:+b.dataset.lv}); }; });
+}
+
+/* --- 학생 화면 --- */
+function playerHTML(){
+  var r = S.room, order = orderFor(r.level), total = order.length;
+  var st = standings(), mine = st.filter(function(p){ return p.id===S.me.id; })[0] || {score:0, rank:'-'};
+  var scoreLine = '<div class="status"><span>내 점수 <b>'+mine.score+'</b>점</span>'
+    + '<button class="btn ghost" id="leave" style="padding:6px 12px;font-size:14px">나가기</button></div>';
+
+  if (r.phase==='lobby') {
+    return '<section class="board"><div class="wait"><div class="spinner" aria-hidden="true"></div>'
+      + '<p class="qtext">'+esc(S.me.nick)+' 님, 들어왔어요!</p>'
+      + '<p style="color:var(--chalk-dim)">선생님이 시작하면 문제가 떠요. 지금 '+S.players.length+'명이 기다리고 있어요.</p></div></section>' + scoreLine;
+  }
+  if (r.phase==='end') {
+    return '<section class="board"><div class="qmeta">최종 결과</div>'
+      + '<div class="bigcode" style="letter-spacing:0">'+mine.score+'<span style="font-size:.35em;color:var(--chalk-dim)"> / '+maxPoints(r.level)+'점</span></div>'
+      + '<p class="qtext" style="margin-top:8px">'+st.length+'명 중 '+mine.rank+'등</p></section>'
+      + '<h2>순위</h2>' + leaderboardHTML(st, 10) + scoreLine;
+  }
+
+  var Q = QUESTIONS[order[r.idx]];
+  var my = S.answers.filter(function(a){ return a.q_index===r.idx && a.player_id===S.me.id; })[0];
+  var reveal = r.phase==='reveal';
+  var opts = optionList(Q).map(function(o){
+    var cls = 'choice';
+    if (reveal) { if (o.v===String(Q.answer)) cls+=' right'; else if (my && my.choice===o.v) cls+=' wrong'; else cls+=' dim'; }
+    else if (my) { cls += my.choice===o.v ? ' mine' : ' dim'; }
+    return '<button class="'+cls+'" data-v="'+o.v+'" '+(reveal||my?'disabled':'')+' aria-label="'+esc(o.t)+'">'
+      + '<span class="key">'+o.key+'</span><span class="label">'+esc(o.t)+'</span>'+swHTML(o.sw)+'</button>';
+  }).join('');
+  var html = boardHTML(Q, r.idx, total) + '<div class="choices'+(Q.type==='ox'?' ox':'')+'">'+opts+'</div>';
+  if (!reveal) {
+    html += my ? '<p class="feedback"><b>답을 보냈어요.</b> 선생님이 정답을 공개할 때까지 기다려요.</p>'
+               : '<p class="small">답을 하나 골라요. 한 번 고르면 바꿀 수 없어요.</p>';
+  } else {
+    var ok = my && my.choice===String(Q.answer);
+    var ansText = Q.type==='ox' ? Q.answer : KEYS[Q.answer]+' '+esc(Q.options[Q.answer].t);
+    html += '<div class="feedback '+(ok?'ok':'bad')+'"><h3>'
+      + (ok ? '정답! +'+LEVELS[Q.lv].pts+'점' : (my ? '아쉬워요. 정답은 '+ansText : '시간 안에 답하지 못했어요. 정답은 '+ansText))
+      + '</h3><p>'+esc(Q.why)+'</p></div>';
+  }
+  return html + scoreLine;
+}
+function bindPlayer(){
+  var l = document.getElementById('leave'); if (l) l.onclick = function(){ drop('lq_player'); leave(); };
+  view.querySelectorAll('button.choice').forEach(function(b){
+    b.onclick = function(){ if (!b.disabled) answer(b.dataset.v); };
+  });
+}
+
+/* ===== 시작 ===== */
+(async function boot(){
+  if (!sb) { render(true); return; }
+  var room = params.get('room');
+  var host = load('lq_host'), player = load('lq_player');
+  try {
+    if (room && params.has('host') && host && host.code===room) { await rejoinHost(host.code, host.pin); return; }
+    if (room && player && player.code===room && player.nick) { await joinAsPlayer(room, player.nick); return; }
+  } catch(e) {}
+  render(true);
+})();
+</script>
+</body>
+</html>
