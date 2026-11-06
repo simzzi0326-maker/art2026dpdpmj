@@ -68,13 +68,26 @@ create policy answers_add on public.quiz_answers for insert to anon, authenticat
                         and r.idx = quiz_answers.q_index
                         and r.phase = 'question'));
 
+-- 선생님 PIN(학교에 하나). 방은 이 PIN을 아는 사람만 만들 수 있음. 아무도 직접 읽을 수 없음.
+-- PIN 정하기/바꾸기는 이 파일에 적지 말고 SQL Editor에서 따로 실행하세요(저장소가 공개이므로):
+--   insert into public.quiz_settings(id, teacher_pin_hash) values (1, extensions.crypt('여기에PIN', extensions.gen_salt('bf')))
+--   on conflict (id) do update set teacher_pin_hash = excluded.teacher_pin_hash;
+create table if not exists public.quiz_settings (
+  id               int primary key default 1 check (id = 1),
+  teacher_pin_hash text not null
+);
+alter table public.quiz_settings enable row level security;
+
 -- 선생님: 방 만들기. 하루 지난 방은 이때 함께 지웁니다.
 create or replace function public.quiz_create_room(p_pin text, p_level int default 0)
 returns text language plpgsql security definer set search_path = public, extensions as $$
 declare v_code text;
 begin
-  if p_pin is null or char_length(p_pin) < 4 then
-    raise exception 'PIN은 4자리 이상이어야 해요';
+  if not exists (select 1 from quiz_settings) then
+    raise exception '선생님 PIN이 아직 설정되지 않았어요';
+  end if;
+  if p_pin is null or not exists (select 1 from quiz_settings s where s.teacher_pin_hash = crypt(p_pin, s.teacher_pin_hash)) then
+    raise exception '선생님 PIN이 맞지 않아요';
   end if;
   delete from quiz_rooms where updated_at < now() - interval '1 day';
   loop
