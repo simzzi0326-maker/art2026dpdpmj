@@ -61,6 +61,22 @@ button{font:inherit;color:inherit;cursor:pointer}
 .acts{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
 .hint{color:var(--muted);font-size:12px;text-align:center}
 
+.err{color:#ff9c8a;font-size:13px;min-height:1em}
+.pbtn.small{padding:7px 10px;font-size:13px;flex:0 0 auto}
+#roomIn{width:110px;flex:0 0 auto;background:#101830;border:2px solid var(--edge2);color:var(--ink);font:inherit;font-size:16px;
+  padding:6px 10px;outline:none;letter-spacing:4px;text-align:center;-webkit-user-select:text;user-select:text}
+#roomIn:focus{border-color:var(--gold)}
+.roomHint{color:var(--muted);font-size:12px;flex:1;min-width:0}
+#teach{position:fixed;inset:0;background:rgba(5,8,16,.72);display:none;align-items:center;justify-content:center;padding:16px;z-index:5}
+#teach .box{width:min(420px,100%);padding:20px;display:flex;flex-direction:column;gap:12px}
+#teach h2{font-size:18px;color:var(--gold);font-weight:400}
+#teach p{font-size:13px;color:var(--muted);line-height:1.6}
+#pinIn{background:#101830;border:2px solid var(--edge2);color:var(--ink);font:inherit;font-size:16px;padding:8px 10px;outline:none;-webkit-user-select:text;user-select:text}
+#teach .bigCode{font-size:48px;color:var(--gold);letter-spacing:10px;text-align:center;text-shadow:3px 3px 0 #7a2a14}
+#teach .link{font-size:12px;word-break:break-all;background:#101830;padding:8px;border:1px solid #33426a;-webkit-user-select:text;user-select:text}
+#teach .btns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.tag.other{color:#d6ffcf}
+#hudRoom{display:block;color:#9fe3ff;font-size:12px;margin-top:2px}
 @media (max-width:720px){
   .panel{flex-direction:column;align-items:stretch;padding:12px}
   .stage{flex:none}
@@ -136,21 +152,46 @@ body.touch #help{display:none}
     </div>
     <div class="opts">
       <div class="row"><label for="nameIn">이름</label><input id="nameIn" maxlength="8" placeholder="이름을 적어요" autocomplete="off"></div>
+      <div class="row"><label for="roomIn">방 코드</label><input id="roomIn" maxlength="4" inputmode="numeric" placeholder="0000" autocomplete="off">
+        <span class="roomHint">선생님이 알려 준 4자리 · 비우면 혼자 둘러봐요</span></div>
       <div id="optRows"></div>
       <div class="acts">
         <button class="pbtn sub" id="randBtn">무작위</button>
         <button class="pbtn" id="startBtn">모험 시작 ▶</button>
       </div>
+      <p class="err" id="startErr" role="alert"></p>
+      <p class="hint"><button class="pbtn sub small" id="teachBtn">선생님: 방 만들기</button></p>
       <p class="hint">시작하면 방향키(또는 WASD)로 움직이고, Space 키로 살펴봐요.</p>
     </div>
   </div>
 </section>
 
+<!-- 선생님 방 만들기 창 -->
+<div id="teach">
+  <div class="win box" role="dialog" aria-labelledby="teachTitle">
+    <h2 id="teachTitle">우리 반 방 만들기</h2>
+    <div id="teachForm" style="display:flex;flex-direction:column;gap:10px">
+      <p>실시간 퀴즈와 같은 선생님 PIN을 넣으면 4자리 방 코드가 생겨요. 같은 코드를 넣은 학생들끼리만 한 마을에서 만나요. 방은 하루 동안 쓸 수 있어요.</p>
+      <label for="pinIn" style="color:var(--gold);font-size:14px">선생님 PIN</label>
+      <input id="pinIn" type="password" inputmode="numeric" autocomplete="off">
+      <p class="err" id="pinErr" role="alert"></p>
+      <div class="btns"><button class="pbtn sub" id="teachClose">닫기</button><button class="pbtn" id="mkRoom">방 만들기</button></div>
+    </div>
+    <div id="teachDone" style="display:none;flex-direction:column;gap:10px">
+      <p>학생들에게 이 코드를 알려 주세요.</p>
+      <div class="bigCode" id="newCode">0000</div>
+      <p>또는 이 주소를 보내면 코드가 자동으로 들어가요.</p>
+      <div class="link" id="newLink"></div>
+      <div class="btns"><button class="pbtn sub" id="teachClose2">닫기</button><button class="pbtn" id="useCode">이 방으로 들어가기</button></div>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════ 2. 게임 ══════════ -->
 <section id="game">
   <canvas id="view"></canvas>
   <div id="labels"></div>
-  <div id="hud" class="win"><canvas id="hudFace" width="20" height="30"></canvas><div><b id="hudName">화원</b><span id="hudPlace">미술사 마을</span></div></div>
+  <div id="hud" class="win"><canvas id="hudFace" width="20" height="30"></canvas><div><b id="hudName">화원</b><span id="hudPlace">미술사 마을</span><span id="hudRoom"></span></div></div>
   <div id="hudBtns"><button class="pbtn sub" id="backBtn">외형 바꾸기</button></div>
   <canvas id="mini"></canvas>
   <div id="help">이동: 방향키 / WASD · 달리기: Shift · 살펴보기: Space</div>
@@ -166,6 +207,7 @@ body.touch #help{display:none}
 </section>
 <div id="fade"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 <script>
 'use strict';
 /* ════════════════════════════════════════════════
@@ -758,9 +800,11 @@ function buildGround(){
 
 // 이름표 DOM
 const labelBox=$('#labels'); let tags=[];
+function addTag(cls,text,getPos){const el=document.createElement('div');el.className='tag '+cls;el.textContent=text;labelBox.append(el);tags.push({el,getPos});return el}
+function removeTag(el){el.remove();tags=tags.filter(t=>t.el!==el)}
 function makeTags(){
   labelBox.innerHTML='';tags=[];
-  const add=(cls,text,getPos)=>{const el=document.createElement('div');el.className='tag '+cls;el.textContent=text;labelBox.append(el);tags.push({el,getPos});return el};
+  const add=addTag;
   add('me',look.name,()=>[player.x,player.y-SH+2]);
   add('npc',npc.name,()=>[npc.x,npc.y-SH+2]);
   for(const o of objects)if(o.label)add('place',o.label,()=>[o.x,o.y-o.spr.height-2]);
@@ -776,9 +820,23 @@ $('#mini').width=MW*3;$('#mini').height=MH*3;
 }
 
 let starting=false;
-function startGame(){
-  if(starting||running)return;starting=true;
-  look.name=($('#nameIn').value.trim()||'화원').slice(0,8);saveLook();
+async function startGame(){
+  if(starting||running)return;
+  const err=$('#startErr');err.textContent='';
+  const name=$('#nameIn').value.trim().slice(0,8);
+  const code=$('#roomIn').value.trim();
+  if(code){
+    if(!/^\d{4}$/.test(code)){err.textContent='방 코드는 숫자 4자리예요.';return}
+    if(!name){err.textContent='친구들이 알아볼 수 있게 이름을 적어 주세요.';$('#nameIn').focus();return}
+    if(!sb){err.textContent='온라인 기능을 불러오지 못했어요. 인터넷 연결을 확인하거나, 방 코드를 비우고 혼자 둘러보세요.';return}
+    starting=true;$('#startBtn').textContent='방 찾는 중…';
+    try{
+      if(!await roomExists(code)){err.textContent=`${code}번 방을 찾을 수 없어요. 코드를 다시 확인해 주세요.`;return}
+    }catch(e){err.textContent='서버에 연결하지 못했어요. 잠시 뒤 다시 해 보거나, 방 코드를 비우고 혼자 둘러보세요.';return}
+    finally{starting=false;$('#startBtn').textContent='모험 시작 ▶'}
+  }
+  starting=true;
+  look.name=name||'화원';saveLook();
   $('#fade').style.opacity=1;
   setTimeout(()=>{
     $('#create').style.display='none';$('#game').style.display='block';
@@ -788,18 +846,24 @@ function startGame(){
     makeTags();resize();
     const hf=$('#hudFace').getContext('2d');hf.clearRect(0,0,SW,SH);hf.drawImage(player.sheet.down[0],0,0);
     $('#hudName').textContent=look.name;
+    $('#hudRoom').textContent='';
+    // 광장 안 빈자리에서 출발 (반 친구들이 한 칸에 겹치지 않게)
+    for(let i=0;i<40;i++){const x=(22+Math.random()*12)*T, y=(23+Math.random()*3)*T+8;if(!blockedAt(x,y)){player.x=x;player.y=y;break}}
+    player.dir='down';
+    if(code)joinRoom(code);
     running=true;starting=false;lastT=performance.now();requestAnimationFrame(loop);
     $('#fade').style.opacity=0;
-    toast(`${look.name}님, 미술사 마을에 오신 것을 환영해요!<br><small style="color:var(--muted)">큐레이터에게 말을 걸어 보세요</small>`,3800);
+    toast(`${esc(look.name)}님, 미술사 마을에 오신 것을 환영해요!<br><small style="color:var(--muted)">${code?code+'번 방 친구들과 함께해요 · ':''}큐레이터에게 말을 걸어 보세요</small>`,3800);
   },450);
 }
 function backToCreate(){
-  running=false;closeDialog();
+  running=false;closeDialog();leaveRoom();
   $('#fade').style.opacity=1;
   setTimeout(()=>{$('#game').style.display='none';$('#create').style.display='flex';$('#fade').style.opacity=0;requestAnimationFrame(createLoop)},450);
 }
 $('#backBtn').onclick=backToCreate;
 
+function esc(t){return String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c])}
 function toast(html,ms){const t=$('#toast');t.innerHTML=html;t.style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.style.display='none',ms)}
 
 /* ── 충돌 ── */
@@ -888,6 +952,13 @@ function update(dt){
     player.walk+=dt*(keys.run?11:7.5);
   }else player.walk=0;
   waterT+=dt;
+  for(const o of net.others.values()){
+    if(!o.seen)continue;
+    const dx=o.tx-o.x, dy=o.ty-o.y, dist=Math.hypot(dx,dy);
+    if(dist>80){o.x=o.tx;o.y=o.ty}else{const k=Math.min(1,dt*12);o.x+=dx*k;o.y+=dy*k}
+    if(o.moving||dist>1)o.walk+=dt*7.5;else o.walk=0;
+  }
+  sendPos(false);
   // 지금 있는 구역
   const tx=player.x/T, ty=player.y/T;
   const place = ty<17? (tx<20?'선사 동굴관 앞':tx>36?'고대 이집트관 앞':'모네의 연못 근처') : ty>27? (tx<20?'조선 화원 앞':tx>36?'그리스 신전관 앞':'마을 남쪽 길') : (tx>20&&tx<35?'마을 광장':'마을 큰길');
@@ -915,13 +986,15 @@ function render(){
   const list=[];
   for(const o of objects){if(o.x+o.spr.width/2<cam.x||o.x-o.spr.width/2>cam.x+VW||o.y-o.spr.height>cam.y+VH||o.y<cam.y)continue;list.push(o)}
   list.push({actor:player,y:player.y},{actor:npc,y:npc.y});
+  for(const o of net.others.values())if(o.seen)list.push({actor:o,y:o.y});
   list.sort((a,b)=>a.y-b.y);
   const pf=player.moving?[1,0,2,0][Math.floor(player.walk)%4]:0;
   for(const o of list){
-    if(o.actor)drawActor(o.actor,o.actor===player?pf:0);
+    if(o.actor)drawActor(o.actor,o.actor===player?pf:o.actor.walk?[1,0,2,0][Math.floor(o.actor.walk)%4]:0);
     else vx.drawImage(o.spr,Math.round(o.x-o.spr.width/2-cam.x),Math.round(o.y-o.spr.height-cam.y));
   }
   // 이름표 위치
+  for(const o of net.others.values())o.tag.style.visibility=o.seen?'':'hidden';
   for(const t of tags){const [wx,wy]=t.getPos();t.el.style.left=(wx-cam.x)*SCALE+'px';t.el.style.top=(wy-cam.y)*SCALE+'px'}
   // 살펴보기 표시
   const tg=!dialog&&findTarget();
@@ -931,6 +1004,7 @@ function render(){
   const mm=$('#mini'),mx=mm.getContext('2d');mx.imageSmoothingEnabled=false;mx.drawImage(miniBase,0,0,MW*3,MH*3);
   mx.strokeStyle='rgba(255,255,255,.8)';mx.strokeRect(cam.x/T*3+.5,cam.y/T*3+.5,VW/T*3,VH/T*3);
   mx.fillStyle='#9fe3ff';mx.fillRect(npc.x/T*3-2,npc.y/T*3-3,4,4);
+  mx.fillStyle='#d6ffcf';for(const o of net.others.values())if(o.seen)mx.fillRect(o.x/T*3-2,o.y/T*3-3,4,4);
   mx.fillStyle=Math.floor(waterT*3)%2?'#fff7a8':'#ff5a3c';mx.fillRect(player.x/T*3-2,player.y/T*3-3,5,5);
 }
 function loop(t){
@@ -945,6 +1019,129 @@ function createLoop(t){
   if(prevAuto&&t-prevTimer>1600){prevTimer=t;prevDir=(prevDir+1)%4;updDirName()}
   drawPreview(t);requestAnimationFrame(createLoop);
 }
+
+/* ════════════════════════════════════════════════
+   8. 함께하기 (Supabase 실시간: 방 코드별 채널)
+   방 코드는 실시간 퀴즈와 같은 quiz_rooms 표를 씁니다.
+   ════════════════════════════════════════════════ */
+const SB_URL='https://grwkfzhxwlmycddgzrem.supabase.co', SB_KEY='sb_publishable_-QJU6BsxS7id-OIBwiPlcQ__6ZtK2rb';
+let sb=null;try{if(window.supabase)sb=window.supabase.createClient(SB_URL,SB_KEY)}catch(e){sb=null}
+const myId=(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2));
+const net={room:null,ch:null,others:new Map(),pending:new Map(),lastSend:0,lastState:'',ok:false};
+const MAX_OTHERS=60;
+
+async function roomExists(code){
+  const r=await sb.from('quiz_rooms').select('code').eq('code',code).maybeSingle();
+  if(r.error)throw r.error;return !!r.data;
+}
+function cleanLook(l){
+  const o={};l=l&&typeof l==='object'?l:{};
+  for(const [k,opt] of Object.entries(OPT))o[k]=opt.items.some(i=>i[0]===l[k])?l[k]:DEFAULT_LOOK[k];
+  return o;
+}
+function cleanName(n){return (String(n||'').trim().slice(0,8))||'친구'}
+function lookToSend(){const o={};for(const k of Object.keys(OPT))o[k]=look[k];return o}
+
+function joinRoom(code){
+  leaveRoom();net.room=code;net.ok=false;updRoomHud();
+  const ch=sb.channel('village-'+code,{config:{presence:{key:myId},broadcast:{self:false}}});
+  ch.on('presence',{event:'sync'},syncPresence)
+    .on('presence',{event:'join'},()=>sendPos(true))
+    .on('broadcast',{event:'mv'},({payload})=>onMove(payload))
+    .subscribe(async st=>{
+      if(ch!==net.ch)return;
+      if(st==='SUBSCRIBED'){
+        net.ok=true;updRoomHud();
+        try{await ch.track({name:look.name,look:lookToSend()})}catch(e){}
+        sendPos(true);
+      }else if(st==='CHANNEL_ERROR'||st==='TIMED_OUT'||st==='CLOSED'){
+        net.ok=false;updRoomHud();
+      }
+    });
+  net.ch=ch;
+}
+function leaveRoom(){
+  if(net.ch&&sb){try{sb.removeChannel(net.ch)}catch(e){}}
+  net.ch=null;net.room=null;net.ok=false;
+  for(const o of net.others.values())removeTag(o.tag);
+  net.others.clear();net.pending.clear();
+}
+function updRoomHud(){
+  const el=$('#hudRoom');if(!net.room){el.textContent='';return}
+  el.textContent=net.ok?`${net.room}번 방 · ${net.others.size+1}명 접속`:`${net.room}번 방 · 연결 중…`;
+}
+function syncPresence(){
+  if(!net.ch)return;
+  const st=net.ch.presenceState(), seen=new Set();
+  for(const [key,metas] of Object.entries(st)){
+    if(key===myId||!metas.length)continue;
+    const m=metas[metas.length-1];seen.add(key);
+    let o=net.others.get(key);
+    const lk=JSON.stringify(cleanLook(m.look));
+    if(!o){
+      if(net.others.size>=MAX_OTHERS)continue;
+      const L=cleanLook(m.look);
+      o={id:key,name:cleanName(m.name),lookKey:lk,sheet:buildSheet(L),x:0,y:0,tx:0,ty:0,dir:'down',moving:false,walk:0,seen:false};
+      o.tag=addTag('other',o.name,()=>[o.x,o.y-SH+2]);o.tag.style.visibility='hidden';
+      net.others.set(key,o);
+      const p=net.pending.get(key);if(p){net.pending.delete(key);applyMove(o,p)}
+    }else if(o.lookKey!==lk||o.name!==cleanName(m.name)){
+      o.lookKey=lk;o.sheet=buildSheet(cleanLook(m.look));o.name=cleanName(m.name);o.tag.textContent=o.name;
+    }
+  }
+  for(const [k,o] of net.others)if(!seen.has(k)){removeTag(o.tag);net.others.delete(k)}
+  updRoomHud();
+}
+function onMove(p){
+  if(!p||typeof p!=='object'||p.id===myId)return;
+  const o=net.others.get(p.id);
+  if(!o){if(net.pending.size<100)net.pending.set(p.id,p);return}
+  applyMove(o,p);
+}
+function applyMove(o,p){
+  const x=+p.x,y=+p.y;if(!isFinite(x)||!isFinite(y))return;
+  o.tx=Math.max(0,Math.min(MW*T,x));o.ty=Math.max(0,Math.min(MH*T,y));
+  if(DIRS.includes(p.d))o.dir=p.d;
+  o.moving=!!p.m;
+  if(!o.seen){o.x=o.tx;o.y=o.ty;o.seen=true}
+}
+function sendPos(force){
+  if(!net.ch||!net.ok)return;
+  const now=performance.now(), state=`${Math.round(player.x)},${Math.round(player.y)},${player.dir},${player.moving?1:0}`;
+  if(!force){
+    if(now-net.lastSend<100)return;
+    if(state===net.lastState&&now-net.lastSend<2000)return;
+  }
+  net.lastSend=now;net.lastState=state;
+  net.ch.send({type:'broadcast',event:'mv',payload:{id:myId,x:Math.round(player.x),y:Math.round(player.y),d:player.dir,m:player.moving?1:0}}).catch(()=>{});
+}
+
+// 선생님: 방 만들기
+function openTeach(){$('#teach').style.display='flex';$('#teachForm').style.display='flex';$('#teachDone').style.display='none';$('#pinErr').textContent='';$('#pinIn').value='';$('#pinIn').focus()}
+function closeTeach(){$('#teach').style.display='none'}
+$('#teachBtn').onclick=openTeach;$('#teachClose').onclick=closeTeach;$('#teachClose2').onclick=closeTeach;
+$('#teach').addEventListener('click',e=>{if(e.target.id==='teach')closeTeach()});
+$('#pinIn').addEventListener('keydown',e=>{if(e.key==='Enter')$('#mkRoom').click()});
+$('#mkRoom').onclick=async()=>{
+  const pin=$('#pinIn').value.trim(), err=$('#pinErr');err.textContent='';
+  if(!pin){err.textContent='선생님 PIN을 넣어 주세요.';return}
+  if(!sb){err.textContent='온라인 기능을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.';return}
+  const b=$('#mkRoom');b.disabled=true;b.textContent='만드는 중…';
+  try{
+    const r=await sb.rpc('quiz_create_room',{p_pin:pin,p_level:0});
+    if(r.error)throw r.error;
+    const code=r.data;
+    $('#newCode').textContent=code;
+    $('#newLink').textContent=location.origin+location.pathname+'?room='+code;
+    $('#teachForm').style.display='none';$('#teachDone').style.display='flex';
+  }catch(e){err.textContent=(e&&e.message&&/PIN/.test(e.message))?e.message:'방을 만들지 못했어요. PIN과 인터넷 연결을 확인해 주세요.'}
+  finally{b.disabled=false;b.textContent='방 만들기'}
+};
+$('#useCode').onclick=()=>{$('#roomIn').value=$('#newCode').textContent;closeTeach();$('#nameIn').focus()};
+$('#roomIn').addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,4)});
+$('#roomIn').addEventListener('keydown',e=>{if(e.key==='Enter')startGame()});
+try{const q=new URLSearchParams(location.search).get('room');if(q&&/^\d{4}$/.test(q))$('#roomIn').value=q}catch(e){}
+addEventListener('beforeunload',leaveRoom);
 
 /* ── 시작 ── */
 buildVillage();
