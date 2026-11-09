@@ -166,6 +166,31 @@ button.choice:hover:not(:disabled){background:var(--hover);border-color:var(--mu
 .small{font-size:14px;color:var(--muted)}
 .net{font-size:13px;color:var(--muted)}
 .net.off{color:var(--bad)}
+.dance{margin:0;background:#f3e6c8;border:1px solid #d9c49a;border-radius:10px;padding:12px 12px 10px;display:grid;gap:4px;justify-items:center;min-width:0}
+.dance svg{width:100%;max-width:300px;height:auto;display:block;overflow:visible}
+.dance figcaption{font-family:var(--display);font-size:20px;color:#6b3d14;text-align:center;text-wrap:balance}
+.dance .tiger,.dance .head,.dance .paw,.dance .tail,.dance .magpie,.dance .wing,.dance .d-notes text{transform-box:fill-box}
+@media (prefers-reduced-motion:no-preference){
+  .dance .tiger{transform-origin:50% 100%;animation:d-sway 1.1s ease-in-out infinite alternate}
+  .dance .head{transform-origin:50% 90%;animation:d-nod .55s ease-in-out infinite alternate}
+  .dance .pl{animation:d-step .55s ease-in-out infinite alternate}
+  .dance .pr{animation:d-step .55s ease-in-out -.55s infinite alternate}
+  .dance .tail{transform-origin:0% 100%;animation:d-wag .5s ease-in-out infinite alternate}
+  .dance .magpie{transform-origin:50% 100%;animation:d-hop .55s cubic-bezier(.3,0,.4,1) infinite alternate}
+  .dance .wing{transform-origin:20% 60%;animation:d-flap .18s linear infinite alternate}
+  .dance .d-notes text{animation:d-float 2.2s ease-in-out infinite}
+  .dance .d-notes .n2{animation-delay:-.7s}.dance .d-notes .n3{animation-delay:-1.4s}
+  @keyframes d-sway{from{transform:rotate(-5deg)}to{transform:rotate(5deg)}}
+  @keyframes d-nod{from{transform:rotate(6deg)}to{transform:rotate(-6deg) translateY(-3px)}}
+  @keyframes d-step{from{transform:translateY(0)}to{transform:translateY(-9px) rotate(-8deg)}}
+  @keyframes d-wag{from{transform:rotate(-10deg)}to{transform:rotate(14deg)}}
+  @keyframes d-hop{0%{transform:translateY(0) rotate(0)}100%{transform:translateY(-14px) rotate(-10deg)}}
+  @keyframes d-flap{from{transform:rotate(0) scaleY(1)}to{transform:rotate(-28deg) scaleY(.7)}}
+  @keyframes d-float{0%{transform:translateY(6px);opacity:0}30%{opacity:1}100%{transform:translateY(-16px);opacity:0}}
+}
+.celebrate{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px;align-items:stretch}
+.celebrate .board{margin-bottom:8px}
+@media (max-width:600px){.celebrate{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -184,6 +209,9 @@ var CONFIG = { SUPABASE_URL: 'https://grwkfzhxwlmycddgzrem.supabase.co', SUPABAS
 var LEVELS = {1:{name:'기초',pts:1},2:{name:'보통',pts:2},3:{name:'도전',pts:3}};
 var LEVEL_LABEL = {0:'전체 10문제',1:'기초만',2:'보통만',3:'도전만'};
 var KEYS = ['①','②','③','④'];
+var DANCE_SVG = "<svg viewBox=\"0 0 260 215\" role=\"img\" aria-hidden=\"true\"> <g class=\"d-notes\" fill=\"#9a6b3c\" font-size=\"20\" font-family=\"serif\"> <text class=\"n1\" x=\"18\" y=\"58\">♪</text><text class=\"n2\" x=\"44\" y=\"30\">♫</text><text class=\"n3\" x=\"168\" y=\"112\">♪</text> </g> <path d=\"M146 72 Q200 55 256 36\" stroke=\"#6b4a2b\" stroke-width=\"5\" fill=\"none\" stroke-linecap=\"round\"/> <path d=\"M236 43 Q244 28 252 22\" stroke=\"#6b4a2b\" stroke-width=\"3\" fill=\"none\" stroke-linecap=\"round\"/> <g fill=\"#2f6b4f\"> <ellipse cx=\"246\" cy=\"22\" rx=\"13\" ry=\"6\"/><ellipse cx=\"236\" cy=\"30\" rx=\"10\" ry=\"5\"/> <ellipse cx=\"160\" cy=\"64\" rx=\"11\" ry=\"5\"/><ellipse cx=\"170\" cy=\"58\" rx=\"9\" ry=\"4\"/> </g> <g class=\"tiger\"> <path class=\"tail\" d=\"M150 176 Q186 174 186 148 Q186 126 168 120\" stroke=\"#e08a2e\" stroke-width=\"11\" fill=\"none\" stroke-linecap=\"round\"/> <path class=\"tail\" d=\"M176 168 l8 6 M184 150 l10 0 M180 130 l9 -5\" stroke=\"#3a2412\" stroke-width=\"3\" stroke-linecap=\"round\"/> <ellipse cx=\"105\" cy=\"152\" rx=\"52\" ry=\"45\" fill=\"#e8963a\" stroke=\"#6b3d14\" stroke-width=\"2\"/> <ellipse cx=\"105\" cy=\"162\" rx=\"25\" ry=\"31\" fill=\"#fbeed3\"/> <path d=\"M60 140 q12 4 16 14 M58 160 q12 2 16 12 M150 140 q-12 4 -16 14 M152 160 q-12 2 -16 12 M84 118 q4 10 0 18 M126 118 q-4 10 0 18\" stroke=\"#3a2412\" stroke-width=\"4\" fill=\"none\" stroke-linecap=\"round\"/> <g class=\"paw pl\"><ellipse cx=\"84\" cy=\"194\" rx=\"15\" ry=\"10\" fill=\"#fbeed3\" stroke=\"#6b3d14\" stroke-width=\"2\"/><path d=\"M78 196 v4 M84 197 v4 M90 196 v4\" stroke=\"#6b3d14\" stroke-width=\"1.5\"/></g> <g class=\"paw pr\"><ellipse cx=\"126\" cy=\"194\" rx=\"15\" ry=\"10\" fill=\"#fbeed3\" stroke=\"#6b3d14\" stroke-width=\"2\"/><path d=\"M120 196 v4 M126 197 v4 M132 196 v4\" stroke=\"#6b3d14\" stroke-width=\"1.5\"/></g> <g class=\"head\"> <circle cx=\"74\" cy=\"50\" r=\"13\" fill=\"#e8963a\" stroke=\"#6b3d14\" stroke-width=\"2\"/><circle cx=\"74\" cy=\"50\" r=\"6\" fill=\"#3a2412\"/> <circle cx=\"136\" cy=\"50\" r=\"13\" fill=\"#e8963a\" stroke=\"#6b3d14\" stroke-width=\"2\"/><circle cx=\"136\" cy=\"50\" r=\"6\" fill=\"#3a2412\"/> <circle cx=\"105\" cy=\"82\" r=\"40\" fill=\"#e8963a\" stroke=\"#6b3d14\" stroke-width=\"2\"/> <ellipse cx=\"80\" cy=\"98\" rx=\"17\" ry=\"12\" fill=\"#fbeed3\"/><ellipse cx=\"130\" cy=\"98\" rx=\"17\" ry=\"12\" fill=\"#fbeed3\"/> <path d=\"M105 46 v12 M95 49 q2 7 0 12 M115 49 q-2 7 0 12 M68 78 h10 M66 88 h9 M142 78 h-10 M144 88 h-9\" stroke=\"#3a2412\" stroke-width=\"3.5\" fill=\"none\" stroke-linecap=\"round\"/> <circle cx=\"90\" cy=\"76\" r=\"11\" fill=\"#f6c443\" stroke=\"#6b3d14\" stroke-width=\"2\"/><circle cx=\"120\" cy=\"76\" r=\"11\" fill=\"#f6c443\" stroke=\"#6b3d14\" stroke-width=\"2\"/> <circle class=\"eye\" cx=\"92\" cy=\"77\" r=\"5\" fill=\"#1d140b\"/><circle class=\"eye\" cx=\"122\" cy=\"77\" r=\"5\" fill=\"#1d140b\"/> <circle cx=\"94\" cy=\"75\" r=\"1.6\" fill=\"#fff\"/><circle cx=\"124\" cy=\"75\" r=\"1.6\" fill=\"#fff\"/> <path d=\"M99 92 h12 l-6 7 z\" fill=\"#c2453a\" stroke=\"#6b3d14\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/> <path d=\"M105 99 q-6 9 -14 5 M105 99 q6 9 14 5\" stroke=\"#6b3d14\" stroke-width=\"2\" fill=\"none\" stroke-linecap=\"round\"/> <path d=\"M97 106 q8 8 16 0\" fill=\"#c2453a\"/> <g fill=\"#6b3d14\"><circle cx=\"76\" cy=\"98\" r=\"1.3\"/><circle cx=\"82\" cy=\"101\" r=\"1.3\"/><circle cx=\"134\" cy=\"98\" r=\"1.3\"/><circle cx=\"128\" cy=\"101\" r=\"1.3\"/></g> </g> </g> <g class=\"magpie\"> <path d=\"M196 54 L160 74 L166 64 Z\" fill=\"#1d1d24\"/> <ellipse cx=\"204\" cy=\"48\" rx=\"17\" ry=\"11\" fill=\"#1d1d24\"/> <ellipse cx=\"208\" cy=\"52\" rx=\"10\" ry=\"6\" fill=\"#ffffff\"/> <g class=\"wing\"><path d=\"M192 42 q12 -8 22 2 q-10 8 -22 -2 z\" fill=\"#ffffff\" stroke=\"#1d1d24\" stroke-width=\"2\"/><path d=\"M194 44 q8 2 16 1\" stroke=\"#2b4e8c\" stroke-width=\"2\" fill=\"none\"/></g> <circle cx=\"220\" cy=\"38\" r=\"9\" fill=\"#1d1d24\"/> <path d=\"M228 36 L238 39 L228 41 Z\" fill=\"#3a3a3a\"/> <circle cx=\"222\" cy=\"36\" r=\"2\" fill=\"#fff\"/><circle cx=\"222.5\" cy=\"36\" r=\"1\" fill=\"#1d1d24\"/> <path d=\"M203 58 v5 M209 58 v5\" stroke=\"#3a2412\" stroke-width=\"2\" stroke-linecap=\"round\"/> </g> </svg>";
+function danceHTML(caption){ return '<figure class="dance" aria-label="만점 축하: 호랑이와 까치가 춤춰요">' + DANCE_SVG + '<figcaption>' + caption + '</figcaption></figure>'; }
+
 
 // type: 'ox' 이면 answer는 'O' 또는 'X', 'mc' 이면 보기 번호(0부터)
 var QUESTIONS = [
@@ -527,8 +555,10 @@ function hostHTML(){
 
   if (r.phase==='end') {
     var st = standings(), max = maxPoints(r.level);
-    return '<section class="board"><div class="qmeta">최종 결과 · '+LEVEL_LABEL[r.level]+' · '+max+'점 만점</div>'
-      + '<p class="qtext">'+(st.length ? '1등은 '+esc(st.filter(function(p){return p.rank===1;}).map(function(p){return p.nick;}).join(', '))+' ('+st[0].score+'점)' : '참여한 학생이 없어요')+'</p></section>'
+    var hb = '<section class="board"><div class="qmeta">최종 결과 · '+LEVEL_LABEL[r.level]+' · '+max+'점 만점</div>'
+      + '<p class="qtext">'+(st.length ? '1등은 '+esc(st.filter(function(p){return p.rank===1;}).map(function(p){return p.nick;}).join(', '))+' ('+st[0].score+'점)' : '참여한 학생이 없어요')+'</p></section>';
+    var perfects = st.filter(function(p){ return max>0 && p.score===max; });
+    return (perfects.length ? '<div class="celebrate">'+hb+danceHTML('만점 '+perfects.length+'명! 호랑이와 까치가 축하해요')+'</div>' : hb)
       + leaderboardHTML(st, 100)
       + '<div class="actions"><button class="btn ghost" id="leave">나가기</button><button class="btn" id="again">새 판 시작</button></div>';
   }
@@ -593,9 +623,11 @@ function playerHTML(){
       + '<p style="color:var(--chalk-dim)">선생님이 시작하면 문제가 떠요. 지금 '+S.players.length+'명이 기다리고 있어요.</p></div></section>' + scoreLine;
   }
   if (r.phase==='end') {
-    return '<section class="board"><div class="qmeta">최종 결과</div>'
+    var pb = '<section class="board"><div class="qmeta">최종 결과</div>'
       + '<div class="bigcode" style="letter-spacing:0">'+mine.score+'<span style="font-size:.35em;color:var(--chalk-dim)"> / '+maxPoints(r.level)+'점</span></div>'
-      + '<p class="qtext" style="margin-top:8px">'+st.length+'명 중 '+mine.rank+'등</p></section>'
+      + '<p class="qtext" style="margin-top:8px">'+st.length+'명 중 '+mine.rank+'등</p></section>';
+    var perfect = maxPoints(r.level)>0 && mine.score===maxPoints(r.level);
+    return (perfect ? '<div class="celebrate">'+pb+danceHTML('만점! 호랑이와 까치가 기쁜 소식을 축하해요')+'</div>' : pb)
       + '<h2>순위</h2>' + leaderboardHTML(st, 10) + scoreLine;
   }
 
