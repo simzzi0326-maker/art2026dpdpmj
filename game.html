@@ -76,6 +76,30 @@ button{font:inherit;color:inherit;cursor:pointer}
 #teach .link{font-size:12px;word-break:break-all;background:#101830;padding:8px;border:1px solid #33426a;-webkit-user-select:text;user-select:text}
 #teach .btns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 .tag.other{color:#d6ffcf}
+/* 퀴즈 선택지 */
+#dialog .choices{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+#dialog .choices:empty{display:none}
+.choice{text-align:left;background:#101830;border:2px solid var(--edge2);padding:8px 12px;font-size:14px}
+.choice:hover,.choice:focus-visible{border-color:var(--gold);outline:none;background:#1a2648}
+/* 가방 */
+#bag{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,calc(100% - 24px));max-height:calc(100% - 24px);
+  overflow:auto;padding:16px 18px;display:none;flex-direction:column;gap:12px;z-index:3}
+#bag .bagHead{display:flex;align-items:center;gap:10px}
+#bag h2{font-size:18px;font-weight:400;color:var(--gold)}
+#bagCount{flex:1;color:var(--muted);font-size:13px}
+#bagGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:8px}
+.slot{aspect-ratio:1;background:#101830;border:2px solid #0a0f1b;outline:2px solid #33426a;display:flex;align-items:center;justify-content:center;
+  font-size:22px;color:#46598a;position:relative;max-width:100%}
+.slot img{width:75%;height:75%;image-rendering:pixelated}
+.slot.on{outline-color:var(--gold)}
+.slot.new::after{content:'NEW';position:absolute;right:-4px;top:-8px;font-size:9px;background:#c9483a;color:#fff;padding:1px 3px}
+#bagInfo{background:#101830;border:2px solid #0a0f1b;padding:10px 12px;min-height:84px;font-size:13px;line-height:1.7}
+#bagInfo b{color:var(--gold);font-size:15px;font-weight:400;display:block}
+#bagInfo .how{color:var(--muted);font-size:12px;margin-top:4px}
+#bagBtn .dot{display:none;background:#f2c84b;color:#2a0c08;font-size:10px;padding:0 4px;margin-left:4px}
+#bagBtn.has .dot{display:inline}
+.itemToast{display:flex;align-items:center;gap:12px;text-align:left}
+.itemToast img{width:48px;height:48px;image-rendering:pixelated;background:#101830;border:2px solid var(--edge2)}
 #hudRoom{display:block;color:#9fe3ff;font-size:12px;margin-top:2px}
 @media (max-width:720px){
   .panel{flex-direction:column;align-items:stretch;padding:12px}
@@ -192,10 +216,15 @@ body.touch #help{display:none}
   <canvas id="view"></canvas>
   <div id="labels"></div>
   <div id="hud" class="win"><canvas id="hudFace" width="20" height="30"></canvas><div><b id="hudName">화원</b><span id="hudPlace">미술사 마을</span><span id="hudRoom"></span></div></div>
-  <div id="hudBtns"><button class="pbtn sub" id="backBtn">외형 바꾸기</button></div>
+  <div id="hudBtns"><button class="pbtn sub" id="bagBtn">가방<span class="dot">!</span></button><button class="pbtn sub" id="backBtn">외형 바꾸기</button></div>
   <canvas id="mini"></canvas>
-  <div id="help">이동: 방향키 / WASD · 달리기: Shift · 살펴보기: Space</div>
-  <div id="dialog" class="win"><div class="who"></div><div class="txt"></div><div class="next">▼</div></div>
+  <div id="help">이동: 방향키 / WASD · 달리기: Shift · 살펴보기: Space · 가방: I</div>
+  <div id="dialog" class="win"><div class="who"></div><div class="txt"></div><div class="choices"></div><div class="next">▼</div></div>
+  <div id="bag" class="win" role="dialog" aria-labelledby="bagTitle">
+    <div class="bagHead"><h2 id="bagTitle">가방</h2><span id="bagCount"></span><button class="pbtn sub small" id="bagClose">닫기</button></div>
+    <div id="bagGrid"></div>
+    <div id="bagInfo"></div>
+  </div>
   <div id="toast" class="win"></div>
   <div id="touch">
     <div id="pad">
@@ -847,6 +876,7 @@ async function startGame(){
     const hf=$('#hudFace').getContext('2d');hf.clearRect(0,0,SW,SH);hf.drawImage(player.sheet.down[0],0,0);
     $('#hudName').textContent=look.name;
     $('#hudRoom').textContent='';
+    prog=loadProg(look.name);bagOpen=false;$('#bag').style.display='none';updBagBtn();
     // 광장 안 빈자리에서 출발 (반 친구들이 한 칸에 겹치지 않게)
     for(let i=0;i<40;i++){const x=(22+Math.random()*12)*T, y=(23+Math.random()*3)*T+8;if(!blockedAt(x,y)){player.x=x;player.y=y;break}}
     player.dir='down';
@@ -857,7 +887,7 @@ async function startGame(){
   },450);
 }
 function backToCreate(){
-  running=false;closeDialog();leaveRoom();
+  running=false;closeDialog();leaveRoom();toggleBag(false);
   $('#fade').style.opacity=1;
   setTimeout(()=>{$('#game').style.display='none';$('#create').style.display='flex';$('#fade').style.opacity=0;requestAnimationFrame(createLoop)},450);
 }
@@ -887,6 +917,7 @@ function findTarget(){
   return null;
 }
 function interact(){
+  if(bagOpen){toggleBag(false);return}
   if(dialog){advanceDialog();return}
   const t=findTarget();if(!t)return;
   if(t.kind==='npc'){
@@ -894,21 +925,48 @@ function interact(){
     openDialog('큐레이터',[`어서 와요, ${look.name}님! 여기는 시대별 미술을 만날 수 있는 '미술사 마을'이에요.`,
       '위쪽에는 선사 동굴관과 고대 이집트관, 아래쪽에는 조선 화원과 그리스 신전관이 있어요.',
       '전시관 문 앞이나 표지판 앞에서 Space 키를 눌러 살펴보세요. 오른쪽 위 연못도 꼭 들러 봐요!',
-      '전시관들은 하나씩 문을 열 예정이에요. 기대해 주세요!']);
-  }else{const i=INFO[t.p.key];openDialog(i.who,i.lines)}
+      '설명을 잘 읽고 퀴즈를 맞히면 아이템을 얻어요. 모은 아이템은 가방(I 키)에서 볼 수 있어요.',
+      '자, 첫 선물이에요. 화원이라면 붓이 있어야죠!']);
+    setFlag('talked');
+  }else{
+    const key=t.p.key, i=INFO[key], lines=i.lines.slice(), qz=QUIZ[key];
+    if(qz&&!prog.quiz[key])lines.push({...qz,key});
+    else if(qz)lines.push('이곳의 퀴즈는 이미 맞혔어요! 가방에서 받은 아이템을 확인해 보세요.');
+    openDialog(i.who,lines);
+    setFlag('read_'+key);
+  }
 }
 let typeTimer=null;
 function openDialog(who,lines){dialog={who,lines,i:0,typing:false};$('#dialog').style.display='block';$('#help').style.visibility='hidden';showLine()}
 function showLine(){
-  const d=dialog, box=$('#dialog .txt');$('#dialog .who').textContent=d.who;
-  const full=d.lines[d.i];let n=0;d.typing=true;box.textContent='';clearInterval(typeTimer);
+  const d=dialog, box=$('#dialog .txt'), chs=$('#dialog .choices');$('#dialog .who').textContent=d.who;
+  chs.innerHTML='';clearInterval(typeTimer);
+  const line=d.lines[d.i];
+  if(typeof line==='object'){ // 퀴즈
+    d.quiz=line;d.typing=false;box.textContent='Q. '+line.q;$('#dialog .next').style.visibility='hidden';
+    d.order=line.choices.map((_,i)=>i).sort(()=>Math.random()-.5);
+    d.order.forEach((ci,k)=>{const b=document.createElement('button');b.className='choice';b.textContent=`${k+1}. ${line.choices[ci]}`;
+      b.onclick=e=>{e.stopPropagation();answerQuiz(ci)};chs.append(b)});
+    return;
+  }
+  d.quiz=null;$('#dialog .next').style.visibility='';
+  const full=line;let n=0;d.typing=true;box.textContent='';clearInterval(typeTimer);
   typeTimer=setInterval(()=>{n+=2;box.textContent=full.slice(0,n);if(n>=full.length){clearInterval(typeTimer);d.typing=false}},28);
 }
+function answerQuiz(ci){
+  const d=dialog;if(!d||!d.quiz)return;const q=d.quiz;d.quiz=null;
+  if(ci===q.answer){
+    prog.quiz[q.key]=true;saveProg();
+    d.lines.splice(d.i+1,0,'⭕ 정답이에요! '+(q.explain||''));
+  }else d.lines.splice(d.i+1,0,'❌ 아쉬워요! 설명을 다시 잘 읽고, 한 번 더 살펴보며 도전해 봐요.');
+  d.i++;showLine();
+  if(ci===q.answer)evalQuests();
+}
 function advanceDialog(){
-  const d=dialog;if(d.typing){clearInterval(typeTimer);$('#dialog .txt').textContent=d.lines[d.i];d.typing=false;return}
+  const d=dialog;if(!d||d.quiz)return;if(d.typing){clearInterval(typeTimer);$('#dialog .txt').textContent=d.lines[d.i];d.typing=false;return}
   d.i++;if(d.i>=d.lines.length)closeDialog();else showLine();
 }
-function closeDialog(){dialog=null;clearInterval(typeTimer);$('#dialog').style.display='none';$('#help').style.visibility=''}
+function closeDialog(){dialog=null;clearInterval(typeTimer);$('#dialog .choices').innerHTML='';$('#dialog').style.display='none';$('#help').style.visibility=''}
 $('#dialog').addEventListener('click',advanceDialog);
 
 /* ── 입력 ── */
@@ -917,8 +975,10 @@ addEventListener('keydown',e=>{
   if(!running)return;
   if(KEYMAP[e.key]){keys[KEYMAP[e.key]]=performance.now();e.preventDefault()}
   if(e.key==='Shift')keys.run=true;
-  if((e.key===' '||e.key==='Enter')&&!e.repeat){interact();e.preventDefault()}
-  if(e.key==='Escape')closeDialog();
+  if(dialog&&dialog.quiz&&/^[1-9]$/.test(e.key)){const k=+e.key-1;if(k<dialog.order.length)answerQuiz(dialog.order[k]);e.preventDefault();return}
+  if((e.key==='i'||e.key==='I'||e.key==='ㅑ')&&!e.repeat&&!dialog){toggleBag();e.preventDefault();return}
+  if(e.key==='Escape'){if(bagOpen)toggleBag(false);else closeDialog();return}
+  if((e.key===' '||e.key==='Enter')&&!e.repeat){if(bagOpen)toggleBag(false);else interact();e.preventDefault()}
 });
 addEventListener('keyup',e=>{if(KEYMAP[e.key])delete keys[KEYMAP[e.key]];if(e.key==='Shift')keys.run=false});
 addEventListener('blur',()=>{for(const k in keys)delete keys[k]});
@@ -937,7 +997,7 @@ function update(dt){
   // 가장 최근에 누른 방향키를 따른다 (옛날 RPG처럼 4방향 이동)
   let dir=null,best=-1;for(const d of DIRS)if(keys[d]&&keys[d]>best){best=keys[d];dir=d}
   player.moving=false;
-  if(dir&&!dialog){
+  if(dir&&!dialog&&!bagOpen){
     player.dir=dir;
     const sp=(keys.run?105:64)*dt, v={down:[0,1],up:[0,-1],left:[-1,0],right:[1,0]}[dir];
     const nx=player.x+v[0]*sp, ny=player.y+v[1]*sp;
@@ -962,7 +1022,7 @@ function update(dt){
   // 지금 있는 구역
   const tx=player.x/T, ty=player.y/T;
   const place = ty<17? (tx<20?'선사 동굴관 앞':tx>36?'고대 이집트관 앞':'모네의 연못 근처') : ty>27? (tx<20?'조선 화원 앞':tx>36?'그리스 신전관 앞':'마을 남쪽 길') : (tx>20&&tx<35?'마을 광장':'마을 큰길');
-  if(place!==curPlace){curPlace=place;$('#hudPlace').textContent=place}
+  if(place!==curPlace){curPlace=place;$('#hudPlace').textContent=place;if(place.endsWith('관 앞')||place==='조선 화원 앞')setFlag('visit_'+place)}
 }
 
 /* ── 그리기 ── */
@@ -1021,7 +1081,134 @@ function createLoop(t){
 }
 
 /* ════════════════════════════════════════════════
-   8. 함께하기 (Supabase 실시간: 방 코드별 채널)
+   8. 아이템 · 퀴즈 · 조건  ★ 선생님이 바꾸기 쉬운 곳 ★
+   - ITEMS : 가방에 들어가는 아이템 (이름, 설명, 얻는 방법 안내)
+   - QUIZ  : 전시관/표지판별 퀴즈 (answer 는 choices 의 순번, 0부터)
+   - QUESTS: 어떤 조건을 채우면 어떤 아이템을 주는지
+     조건에 쓸 수 있는 기록:
+       p.flags.talked         큐레이터와 이야기함
+       p.flags['read_키']     그곳 설명을 읽음 (키: cave egypt hanok greek monet pagoda welcome easel)
+       p.flags['visit_장소']  그 장소 앞에 가 봄
+       p.flags.friend         방 코드로 친구와 함께 있었음
+       p.quiz.키              그곳 퀴즈를 맞힘
+   ════════════════════════════════════════════════ */
+const ITEMS = {
+  brush:  {name:'화원의 붓',        desc:'조선의 화원들이 쓰던 붓이에요. 먹의 진하고 옅음(농담)으로 산과 물, 사람을 그렸어요.'},
+  palette:{name:'화가의 팔레트',    desc:'물감을 덜어 섞는 판이에요. 서양 화가들은 팔레트 위에서 유화 물감을 섞어 원하는 색을 만들었어요.'},
+  ochre:  {name:'황토 안료',        desc:'선사 시대 사람들은 황토와 숯, 광물 가루를 물감 삼아 동굴 벽에 동물을 그렸어요.'},
+  papyrus:{name:'파피루스 두루마리', desc:'고대 이집트 사람들은 파피루스 풀 줄기를 얇게 펴 붙여 종이처럼 쓰는 재료를 만들었어요.'},
+  minhwa: {name:'까치호랑이 민화',   desc:'까치와 호랑이를 함께 그린 민화예요. 좋은 소식을 바라고 나쁜 기운을 막아 달라는 마음을 담았어요.'},
+  column: {name:'도리아식 기둥 조각', desc:'장식이 적고 굵고 단단한 느낌의 도리아식 기둥이에요. 파르테논 신전이 이 양식으로 지어졌어요.'},
+  lily:   {name:'수련 한 송이',      desc:'모네가 지베르니 정원 연못에서 빛에 따라 달라지는 모습을 여러 번 그린 꽃이에요.'},
+  rubbing:{name:'석탑 탁본',        desc:'종이를 대고 먹방망이로 두드려 무늬를 그대로 떠낸 것을 탁본이라고 해요.'},
+  map:    {name:'마을 탐험 지도',    desc:'미술사 마을의 네 전시관을 모두 찾아간 탐험가에게 주는 지도예요.'},
+  knot:   {name:'우정 매듭',        desc:'전통 매듭 공예로 엮은 매듭이에요. 함께 모험한 친구를 기억하게 해 줘요.'},
+  medal:  {name:'미술사 박사 메달',  desc:'마을의 모든 퀴즈를 맞힌 사람만 받을 수 있는 메달이에요. 정말 대단해요!'},
+};
+const QUIZ = {
+  cave:  {q:'라스코 동굴벽화에 주로 그려진 것은 무엇일까요?', choices:['들소, 말 같은 동물','왕의 얼굴','꽃과 나비'], answer:0,
+          explain:'선사 시대 사람들은 사냥하던 동물을 동굴 벽에 그렸어요.'},
+  egypt: {q:'고대 이집트 벽화 속 사람의 눈과 어깨는 어떤 모습으로 그렸을까요?', choices:['앞모습','옆모습','뒷모습'], answer:0,
+          explain:'얼굴과 다리는 옆모습, 눈과 어깨는 앞모습! 이것이 정면성의 원리예요.'},
+  hanok: {q:'조선 시대에 그림 그리는 일을 맡았던 관청의 이름은?', choices:['도화서','집현전','규장각'], answer:0,
+          explain:'도화서의 화원들이 궁중의 그림을 그렸어요. 김홍도도 도화서 화원이었어요.'},
+  greek: {q:'파르테논 신전의 기둥은 어떤 양식일까요?', choices:['도리아식','이오니아식','코린트식'], answer:0,
+          explain:'파르테논 신전은 단순하고 힘찬 도리아식 기둥으로 지어졌어요.'},
+  monet: {q:'모네처럼 빛에 따라 달라지는 색을 그린 미술 흐름을 무엇이라고 할까요?', choices:['인상주의','입체주의','초현실주의'], answer:0,
+          explain:'모네의 그림 「인상, 해돋이」에서 \'인상주의\'라는 이름이 나왔어요.'},
+  pagoda:{q:'불국사 삼층석탑(석가탑)은 어느 시대에 세워졌을까요?', choices:['통일신라','고려','조선'], answer:0,
+          explain:'통일신라 시대에 세워진, 비례가 아름다운 석탑이에요.'},
+};
+const QUESTS = [
+  {item:'brush',   how:'큐레이터와 이야기하기',            cond:p=>p.flags.talked},
+  {item:'palette', how:'광장의 이젤 살펴보기',             cond:p=>p.flags.read_easel},
+  {item:'ochre',   how:'선사 동굴관 퀴즈 맞히기',          cond:p=>p.quiz.cave},
+  {item:'papyrus', how:'고대 이집트관 퀴즈 맞히기',        cond:p=>p.quiz.egypt},
+  {item:'minhwa',  how:'조선 화원 퀴즈 맞히기',            cond:p=>p.quiz.hanok},
+  {item:'column',  how:'그리스 신전관 퀴즈 맞히기',        cond:p=>p.quiz.greek},
+  {item:'lily',    how:'모네의 연못 퀴즈 맞히기',          cond:p=>p.quiz.monet},
+  {item:'rubbing', how:'삼층석탑 퀴즈 맞히기',             cond:p=>p.quiz.pagoda},
+  {item:'map',     how:'네 전시관 앞에 모두 가 보기',       cond:p=>['선사 동굴관 앞','고대 이집트관 앞','조선 화원 앞','그리스 신전관 앞'].every(k=>p.flags['visit_'+k])},
+  {item:'knot',    how:'방 코드로 들어가 친구와 함께 있기',  cond:p=>p.flags.friend},
+  {item:'medal',   how:'마을의 퀴즈 6개 모두 맞히기',       cond:p=>Object.keys(QUIZ).every(k=>p.quiz[k])},
+];
+
+/* ── 아이템 그림 (16×16 도트) ── */
+const ICON_DRAW = {
+  brush:(P)=>{for(let i=0;i<9;i++)P(12-i,2+i,2,1,i%3?'#a8743f':'#8a5a2c');P(3,11,2,2,'#e8e2d0');P(2,12,2,2,'#2a2220');P(1,14,2,1,'#2a2220');P(11,2,2,1,'#c0392b')},
+  palette:(P)=>{pell(ICTX,8,8,7,5,'#d9b27a');pell(ICTX,8,8,6,4,'#e6c48e');P(4,11,3,2,'rgba(0,0,0,0)');ICTX.clearRect(4,10,3,3);
+    P(4,6,2,2,'#c0392b');P(7,5,2,2,'#f0c419');P(10,6,2,2,'#2f6fd0');P(11,9,2,2,'#3f9f5a');P(8,10,2,2,'#ffffff')},
+  ochre:(P)=>{pell(ICTX,8,10,6,4,'#8a5a32');P(2,9,13,2,'#a8743f');pell(ICTX,8,8,5,2,'#d9a23a');P(6,6,4,2,'#e8b84a');P(5,13,6,1,'#6b4226')},
+  papyrus:(P)=>{P(3,3,10,10,'#ead7a4');P(2,2,2,12,'#c9a46a');P(12,2,2,12,'#c9a46a');for(let y=5;y<12;y+=2)P(5,y,6,1,'#8a6a3a');P(6,4,1,1,'#2f6fd0');P(9,4,1,1,'#c0392b')},
+  minhwa:(P)=>{P(1,1,14,14,'#7a4e2c');P(2,2,12,12,'#f3e6c4');P(4,8,7,4,'#e08a2a');P(5,8,1,4,'#2a2220');P(8,8,1,4,'#2a2220');P(10,7,3,3,'#e08a2a');P(11,8,1,1,'#2a2220');
+    P(4,3,3,2,'#24304a');P(7,4,1,1,'#ffffff');P(3,4,1,1,'#24304a');P(9,3,4,1,'#3f8f43')},
+  column:(P)=>{P(3,1,10,2,'#ece6da');P(4,3,8,10,'#ece6da');P(6,3,1,10,'#c9c0b0');P(9,3,1,10,'#c9c0b0');P(3,13,10,2,'#d8cfbf');P(11,9,2,1,'#c9c0b0')},
+  lily:(P)=>{pell(ICTX,8,11,7,3,'#3f8f43');P(8,11,1,3,'#2f6e33');P(5,6,2,4,'#ffb3c8');P(9,6,2,4,'#ffb3c8');P(7,4,2,6,'#ff8fb1');P(4,8,8,2,'#ffc7d6');P(7,8,2,1,'#ffd34d')},
+  rubbing:(P)=>{P(2,1,12,14,'#f7f1e1');P(2,1,12,1,'#d8cfbf');P(7,3,2,2,'#4a4a55');P(5,5,6,1,'#4a4a55');P(6,6,4,2,'#4a4a55');P(4,8,8,1,'#4a4a55');P(5,9,6,2,'#4a4a55');P(3,11,10,1,'#4a4a55');P(4,12,8,2,'#4a4a55')},
+  map:(P)=>{P(1,3,5,11,'#ead7a4');P(6,2,5,11,'#f3e6c4');P(11,3,4,11,'#ead7a4');P(3,6,9,1,'#c0392b');P(8,6,1,5,'#c0392b');P(8,10,4,1,'#c0392b');P(12,9,2,2,'#c0392b');P(3,11,2,2,'#3f7fc4');P(9,3,2,2,'#3f8f43')},
+  knot:(P)=>{P(6,1,4,3,'#c0392b');P(4,4,8,4,'#d8423a');P(3,5,2,2,'#c0392b');P(11,5,2,2,'#c0392b');P(7,4,2,4,'#a32b20');P(6,8,4,2,'#c0392b');
+    for(let i=0;i<5;i++){P(6-(i>>1),10+i,1,1,'#d8423a');P(9+(i>>1),10+i,1,1,'#d8423a')}P(7,10,2,5,'#e05a48')},
+  medal:(P)=>{P(4,1,3,6,'#2f4b8f');P(9,1,3,6,'#c0392b');pcirc(ICTX,8,10,5,'#e8b83a');pcirc(ICTX,8,10,3,'#f6d36a');P(7,8,2,4,'#b88a1a');P(6,9,4,1,'#b88a1a')},
+};
+let ICTX=null;const ICON_CACHE={};
+function itemIcon(id){
+  if(ICON_CACHE[id])return ICON_CACHE[id];
+  const c=mkCanvas(16,16);ICTX=c.getContext('2d');
+  (ICON_DRAW[id]||((P)=>{P(4,4,8,8,'#c9c3bb')}))((x,y,w,h,col)=>{ICTX.fillStyle=col;ICTX.fillRect(x,y,w,h)});
+  outline(c);return ICON_CACHE[id]=c.toDataURL();
+}
+
+/* ── 진행 상황 (이 기기에 이름별로 저장) ── */
+let prog={items:{},flags:{},quiz:{},seen:{}};
+function loadProg(name){
+  try{const s=JSON.parse(localStorage.getItem('ahq-prog-'+name)||'null');
+    if(s&&typeof s==='object')return {items:s.items||{},flags:s.flags||{},quiz:s.quiz||{},seen:s.seen||{}}}catch(e){}
+  return {items:{},flags:{},quiz:{},seen:{}};
+}
+function saveProg(){try{localStorage.setItem('ahq-prog-'+look.name,JSON.stringify(prog))}catch(e){}}
+function setFlag(f){if(prog.flags[f])return;prog.flags[f]=true;saveProg();evalQuests()}
+function evalQuests(){
+  const got=[];
+  for(const q of QUESTS){if(!prog.items[q.item]&&ITEMS[q.item]){let ok=false;try{ok=!!q.cond(prog)}catch(e){}if(ok){prog.items[q.item]=Date.now();got.push(q.item)}}}
+  if(!got.length)return;
+  saveProg();updBagBtn();if(bagOpen)renderBag();
+  // 같은 순간에 얻은 아이템은 차례로 보여 준다
+  got.forEach((id,i)=>setTimeout(()=>toast(`<div class="itemToast"><img src="${itemIcon(id)}" alt=""><div><b style="color:var(--gold)">새 아이템을 얻었어요!</b><br>${esc(ITEMS[id].name)}<br><small style="color:var(--muted)">가방(I)에서 확인해요</small></div></div>`,2600),i*2700));
+}
+
+/* ── 가방 창 ── */
+let bagOpen=false, bagSel=null;
+function updBagBtn(){$('#bagBtn').classList.toggle('has',Object.keys(prog.items).some(k=>!prog.seen[k]))}
+function toggleBag(force){
+  bagOpen=force===undefined?!bagOpen:force;
+  $('#bag').style.display=bagOpen?'flex':'none';
+  if(bagOpen){for(const k in keys)delete keys[k];bagSel=null;renderBag()}
+  else{let ch=false;for(const k in prog.items)if(!prog.seen[k]){prog.seen[k]=true;ch=true}if(ch)saveProg();updBagBtn()}
+}
+function renderBag(){
+  const grid=$('#bagGrid');grid.innerHTML='';
+  const total=QUESTS.length, have=QUESTS.filter(q=>prog.items[q.item]).length;
+  $('#bagCount').textContent=`${have} / ${total}개 모음`;
+  for(const q of QUESTS){
+    const it=ITEMS[q.item];if(!it)continue;
+    const has=!!prog.items[q.item];
+    const b=document.createElement('button');b.className='slot'+(bagSel===q.item?' on':'')+(has&&!prog.seen[q.item]?' new':'');
+    b.setAttribute('aria-label',has?it.name:'아직 얻지 못한 아이템');
+    if(has){const im=document.createElement('img');im.src=itemIcon(q.item);im.alt='';b.append(im)}else b.textContent='?';
+    b.onclick=()=>{bagSel=q.item;renderBag()};
+    grid.append(b);
+  }
+  const info=$('#bagInfo');
+  if(!bagSel){info.innerHTML='<span style="color:var(--muted)">칸을 눌러 아이템을 살펴보세요. 물음표 칸은 아직 얻지 못한 아이템이에요.</span>';return}
+  const q=QUESTS.find(x=>x.item===bagSel), it=ITEMS[bagSel], has=!!prog.items[bagSel];
+  info.innerHTML=has?`<b>${esc(it.name)}</b>${esc(it.desc)}<div class="how">얻은 방법: ${esc(q.how)}</div>`
+                    :`<b>???</b>아직 얻지 못한 아이템이에요.<div class="how">얻는 방법: ${esc(q.how)}</div>`;
+}
+$('#bagBtn').onclick=()=>toggleBag();
+$('#bagClose').onclick=()=>toggleBag(false);
+
+/* ════════════════════════════════════════════════
+   9. 함께하기 (Supabase 실시간: 방 코드별 채널)
    방 코드는 실시간 퀴즈와 같은 quiz_rooms 표를 씁니다.
    ════════════════════════════════════════════════ */
 const SB_URL='https://grwkfzhxwlmycddgzrem.supabase.co', SB_KEY='sb_publishable_-QJU6BsxS7id-OIBwiPlcQ__6ZtK2rb';
@@ -1091,6 +1278,7 @@ function syncPresence(){
   }
   for(const [k,o] of net.others)if(!seen.has(k)){removeTag(o.tag);net.others.delete(k)}
   updRoomHud();
+  if(net.others.size>0&&running)setFlag('friend');
 }
 function onMove(p){
   if(!p||typeof p!=='object'||p.id===myId)return;
