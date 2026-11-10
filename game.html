@@ -64,9 +64,9 @@ button{font:inherit;color:inherit;cursor:pointer}
 
 .err{color:#ff9c8a;font-size:13px;min-height:1em}
 .pbtn.small{padding:7px 10px;font-size:13px;flex:0 0 auto}
-#roomIn{width:110px;flex:0 0 auto;background:#101830;border:2px solid var(--edge2);color:var(--ink);font:inherit;font-size:16px;
+#pwIn,#roomIn{width:110px;flex:0 0 auto;background:#101830;border:2px solid var(--edge2);color:var(--ink);font:inherit;font-size:16px;
   padding:6px 10px;outline:none;letter-spacing:4px;text-align:center;-webkit-user-select:text;user-select:text}
-#roomIn:focus{border-color:var(--gold)}
+#pwIn:focus,#roomIn:focus{border-color:var(--gold)}
 .roomHint{color:var(--muted);font-size:12px;flex:1;min-width:0}
 #teach{position:fixed;inset:0;background:rgba(5,8,16,.72);display:none;align-items:center;justify-content:center;padding:16px;z-index:5}
 #teach .box{width:min(420px,100%);padding:20px;display:flex;flex-direction:column;gap:12px}
@@ -76,6 +76,12 @@ button{font:inherit;color:inherit;cursor:pointer}
 #teach .bigCode{font-size:48px;color:var(--gold);letter-spacing:10px;text-align:center;text-shadow:3px 3px 0 #7a2a14}
 #teach .link{font-size:12px;word-break:break-all;background:#101830;padding:8px;border:1px solid #33426a;-webkit-user-select:text;user-select:text}
 #teach .btns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+#teach .box{max-height:calc(100% - 20px);overflow:auto}
+#listRoom,#rsName,#rsPw{background:#101830;border:2px solid var(--edge2);color:var(--ink);font:inherit;font-size:14px;padding:6px 8px;outline:none;width:120px;-webkit-user-select:text;user-select:text}
+#listOut{max-height:260px;overflow:auto;font-size:13px}
+#listOut table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+#listOut th,#listOut td{padding:5px 6px;border-bottom:1px solid #33426a;text-align:left}
+#listOut th{color:var(--gold);font-weight:400;position:sticky;top:0;background:var(--win2)}
 .tag.other{color:#d6ffcf}
 /* 퀴즈 선택지 */
 #dialog .choices{display:flex;flex-direction:column;gap:6px;margin-top:10px}
@@ -167,6 +173,8 @@ button{font:inherit;color:inherit;cursor:pointer}
 .itemToast{display:flex;align-items:center;gap:12px;text-align:left}
 .itemToast img{width:48px;height:48px;image-rendering:pixelated;background:#101830;border:2px solid var(--edge2)}
 #hudRoom{display:block;color:#9fe3ff;font-size:12px;margin-top:2px}
+#hudSave{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+#hudSave.bad{color:#ff9c8a}
 @media (max-width:720px){
   .panel{flex-direction:column;align-items:stretch;padding:12px}
   .stage{flex:none}
@@ -245,6 +253,8 @@ body.touch #help{display:none}
     </div>
     <div class="opts">
       <div class="row"><label for="nameIn">이름</label><input id="nameIn" maxlength="8" placeholder="이름을 적어요" autocomplete="off"></div>
+      <div class="row"><label for="pwIn">비밀번호</label><input id="pwIn" type="password" maxlength="4" inputmode="numeric" placeholder="0000" autocomplete="off">
+        <span class="roomHint">숫자 4자리를 정하면 어느 기기에서든 이어 할 수 있어요 · 비우면 이 기기에만 저장</span></div>
       <div class="row"><label for="roomIn">방 코드</label><input id="roomIn" maxlength="4" inputmode="numeric" placeholder="0000" autocomplete="off">
         <span class="roomHint">선생님이 알려 준 4자리 · 비우면 혼자 둘러봐요</span></div>
       <div id="optRows"></div>
@@ -269,6 +279,13 @@ body.touch #help{display:none}
       <input id="pinIn" type="password" inputmode="numeric" autocomplete="off">
       <p class="err" id="pinErr" role="alert"></p>
       <div class="btns"><button class="pbtn sub" id="teachClose">닫기</button><button class="pbtn" id="mkRoom">방 만들기</button></div>
+      <hr style="border:0;border-top:1px solid #33426a;margin:6px 0">
+      <p>같은 PIN으로 학생들의 진행 상황을 볼 수 있어요. 방 코드를 적으면 그 방에 들어왔던 학생만 보여요.</p>
+      <div class="btns" style="justify-content:flex-start"><input id="listRoom" maxlength="4" inputmode="numeric" placeholder="방 코드(선택)" autocomplete="off"><button class="pbtn sub" id="listBtn">진행 상황 보기</button></div>
+      <div id="listOut"></div>
+      <details><summary style="cursor:pointer;color:var(--gold);font-size:13px">학생 비밀번호 바꿔 주기</summary>
+        <div class="btns" style="justify-content:flex-start;margin-top:8px"><input id="rsName" maxlength="12" placeholder="학생 이름" autocomplete="off"><input id="rsPw" maxlength="4" inputmode="numeric" placeholder="새 비밀번호" autocomplete="off"><button class="pbtn sub small" id="rsBtn">바꾸기</button></div>
+        <p class="err" id="rsMsg" role="status"></p></details>
     </div>
     <div id="teachDone" style="display:none;flex-direction:column;gap:10px">
       <p>학생들에게 이 코드를 알려 주세요.</p>
@@ -284,7 +301,7 @@ body.touch #help{display:none}
 <section id="game">
   <canvas id="view"></canvas>
   <div id="labels"></div>
-  <div id="hud" class="win"><canvas id="hudFace" width="20" height="30"></canvas><div><b id="hudName">화원</b><span id="hudPlace">미술사 마을</span><span id="hudRoom"></span></div></div>
+  <div id="hud" class="win"><canvas id="hudFace" width="20" height="30"></canvas><div><b id="hudName">화원</b><span id="hudPlace">미술사 마을</span><span id="hudRoom"></span><span id="hudSave"></span></div></div>
   <div id="hudBtns"><button class="pbtn sub" id="bagBtn">가방<span class="dot">!</span></button><button class="pbtn sub" id="backBtn">외형 바꾸기</button></div>
   <canvas id="mini"></canvas>
   <div id="help">이동: 방향키 / WASD · 달리기: Shift · 살펴보기: Space · 가방: I</div>
@@ -1813,6 +1830,23 @@ async function startGame(){
   const err=$('#startErr');err.textContent='';
   const name=$('#nameIn').value.trim().slice(0,8);
   const code=$('#roomIn').value.trim();
+  const pw=$('#pwIn').value.trim();
+  let cloudProg=null;
+  if(pw){
+    if(!/^\d{4}$/.test(pw)){err.textContent='비밀번호는 숫자 4자리예요.';return}
+    if(!name){err.textContent='비밀번호를 쓰려면 이름을 꼭 적어 주세요.';$('#nameIn').focus();return}
+    if(!sb){err.textContent='온라인 기능을 불러오지 못했어요. 비밀번호 칸을 비우면 이 기기에만 저장하며 할 수 있어요.';return}
+    if(cloud.loadedFor!==name+'/'+pw){
+      starting=true;$('#startBtn').textContent='불러오는 중…';
+      try{const r=await sb.rpc('game_load',{p_name:name,p_pw:pw});if(r.error)throw r.error;
+        if(r.data.status==='wrong'){err.textContent=`'${name}'은(는) 이미 다른 비밀번호로 쓰고 있는 이름이에요. 비밀번호를 확인하거나, 반·번호를 붙인 이름(예: 2-3 홍길동)을 써 보세요.`;return}
+        if(r.data.status==='ok'){cloudProg=r.data.prog||{};const lk=r.data.look||{};for(const k of Object.keys(OPT))if(OPT[k].items.some(i=>i[0]===lk[k]))look[k]=lk[k];refresh()}
+        cloud.loadedFor=name+'/'+pw;
+      }catch(e){err.textContent='서버에 연결하지 못했어요. 잠시 뒤 다시 해 보거나, 비밀번호 칸을 비우고 이 기기에만 저장하며 해 보세요.';return}
+      finally{starting=false;$('#startBtn').textContent='모험 시작 ▶'}
+    }
+  }
+  cloud.on=!!pw;cloud.name=name;cloud.pw=pw;
   if(code){
     if(!/^\d{4}$/.test(code)){err.textContent='방 코드는 숫자 4자리예요.';return}
     if(!name){err.textContent='친구들이 알아볼 수 있게 이름을 적어 주세요.';$('#nameIn').focus();return}
@@ -1828,7 +1862,10 @@ async function startGame(){
   $('#fade').style.opacity=1;
   setTimeout(()=>{
     $('#create').style.display='none';$('#game').style.display='block';
-    prog=loadProg(look.name);
+    if(cloudProg){prog=loadProg('\u0000');Object.assign(prog,{items:cloudProg.items||{},flags:cloudProg.flags||{},quiz:cloudProg.quiz||{},seen:cloudProg.seen||{},equip:cloudProg.equip||{},tower:cloudProg.tower||null,pet:cloudProg.pet||null,design:cloudProg.design||null})}
+    else if(!(cloud.on&&cloud.loadedFor===look.name+'/'+cloud.pw&&prog&&prog._who===look.name))prog=loadProg(look.name);
+    prog._who=look.name;
+    setSaveHud(cloud.on?'☁ 이름+비밀번호로 저장돼요':'이 기기에만 저장돼요');if(cloud.on)cloudQueue();
     player.sheet=buildSheet(look);
     const m=getMap('early');useMap(m);
     setPet(prog.pet||null);
@@ -1847,6 +1884,7 @@ async function startGame(){
   },450);
 }
 function backToCreate(){
+  if(cloud.on)cloudSave();
   running=false;closeDialog();if(omokOpen)closeOmok();leaveRoom();toggleBag(false);closeTower();closeDesign();closeJar();closeEojin();
   $('#fade').style.opacity=1;
   setTimeout(()=>{$('#game').style.display='none';$('#create').style.display='flex';$('#fade').style.opacity=0;requestAnimationFrame(createLoop)},450);
@@ -2396,7 +2434,22 @@ function loadProg(name){
     if(s&&typeof s==='object')return {items:s.items||{},flags:s.flags||{},quiz:s.quiz||{},seen:s.seen||{},equip:s.equip||{},tower:s.tower||null,pet:s.pet||null,design:s.design||null}}catch(e){}
   return {items:{},flags:{},quiz:{},seen:{},equip:{}};
 }
-function saveProg(){try{localStorage.setItem('ahq-prog-'+look.name,JSON.stringify(prog))}catch(e){}}
+function saveProg(){try{localStorage.setItem('ahq-prog-'+look.name,JSON.stringify(prog))}catch(e){}cloudQueue()}
+/* ── Supabase에 진행 상황 저장 (이름 + 4자리 비밀번호) ── */
+const cloud={on:false,name:'',pw:'',timer:0,busy:false,again:false,loadedFor:''};
+function setSaveHud(t,bad){const el=$('#hudSave');if(!el)return;el.textContent=t;el.classList.toggle('bad',!!bad)}
+function cloudQueue(){if(!cloud.on)return;clearTimeout(cloud.timer);cloud.timer=setTimeout(cloudSave,2000);setSaveHud('☁ 저장 대기…')}
+async function cloudSave(){
+  if(!cloud.on||!sb)return;
+  if(cloud.busy){cloud.again=true;return}
+  cloud.busy=true;clearTimeout(cloud.timer);setSaveHud('☁ 저장 중…');
+  try{const lk={};for(const k of Object.keys(OPT))lk[k]=look[k];
+    const r=await sb.rpc('game_save',{p_name:cloud.name,p_pw:cloud.pw,p_prog:prog,p_look:lk,p_room:net.room||''});
+    if(r.error)throw r.error;setSaveHud('☁ 저장됨')}
+  catch(e){setSaveHud('☁ 저장 실패 · 이 기기에는 저장돼요',true)}
+  finally{cloud.busy=false;if(cloud.again){cloud.again=false;cloudQueue()}}
+}
+addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&cloud.on)cloudSave()});
 function setFlag(f){if(prog.flags[f])return;prog.flags[f]=true;saveProg();evalQuests()}
 function evalQuests(){
   const got=[];
@@ -3095,6 +3148,27 @@ $('#mkRoom').onclick=async()=>{
   }catch(e){err.textContent=(e&&e.message&&/PIN/.test(e.message))?e.message:'방을 만들지 못했어요. PIN과 인터넷 연결을 확인해 주세요.'}
   finally{b.disabled=false;b.textContent='방 만들기'}
 };
+$('#listBtn').onclick=async()=>{
+  const pin=$('#pinIn').value.trim(), out=$('#listOut'), err=$('#pinErr');err.textContent='';
+  if(!pin){err.textContent='위 칸에 선생님 PIN을 넣어 주세요.';return}
+  if(!sb){err.textContent='온라인 기능을 불러오지 못했어요.';return}
+  out.textContent='불러오는 중…';
+  try{const r=await sb.rpc('game_progress_list',{p_pin:pin,p_room:$('#listRoom').value.trim()||null});if(r.error)throw r.error;
+    const rows=r.data||[];
+    if(!rows.length){out.textContent='아직 저장된 학생이 없어요. 학생들이 비밀번호를 정하고 들어오면 여기에 보여요.';return}
+    const total=QUESTS.length, qn=Object.keys(QUIZ).length;
+    out.innerHTML=`<table><thead><tr><th>이름</th><th>아이템</th><th>퀴즈</th><th>방</th><th>마지막 저장</th></tr></thead><tbody>${rows.map(w=>
+      `<tr><td>${esc(w.name)}</td><td>${w.items} / ${total}</td><td>${w.quizzes} / ${qn}</td><td>${esc(w.last_room||'-')}</td><td>${new Date(w.updated_at).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</td></tr>`).join('')}</tbody></table>`;
+  }catch(e){out.textContent='';err.textContent=(e&&e.message&&/PIN/.test(e.message))?e.message:'불러오지 못했어요. PIN과 인터넷 연결, Supabase 설정(game-progress.sql)을 확인해 주세요.'}
+};
+$('#rsBtn').onclick=async()=>{
+  const pin=$('#pinIn').value.trim(), msg=$('#rsMsg'), nm=$('#rsName').value.trim(), np=$('#rsPw').value.trim();msg.textContent='';
+  if(!pin){msg.textContent='위 칸에 선생님 PIN을 넣어 주세요.';return}
+  if(!nm||!/^\d{4}$/.test(np)){msg.textContent='학생 이름과 새 비밀번호(숫자 4자리)를 적어 주세요.';return}
+  try{const r=await sb.rpc('game_reset_pw',{p_pin:pin,p_name:nm,p_new_pw:np});if(r.error)throw r.error;msg.textContent=`${nm} 학생의 비밀번호를 바꿨어요.`}
+  catch(e){msg.textContent=(e&&e.message)||'바꾸지 못했어요.'}
+};
+$('#pwIn').addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,4)});
 $('#useCode').onclick=()=>{$('#roomIn').value=$('#newCode').textContent;closeTeach();$('#nameIn').focus()};
 $('#roomIn').addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,4)});
 $('#roomIn').addEventListener('keydown',e=>{if(e.key==='Enter')startGame()});
