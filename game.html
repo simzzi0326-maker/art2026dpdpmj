@@ -87,7 +87,8 @@ button{font:inherit;color:inherit;cursor:pointer}
 #bag .bagHead{display:flex;align-items:center;gap:10px}
 #bag h2{font-size:18px;font-weight:400;color:var(--gold)}
 #bagCount{flex:1;color:var(--muted);font-size:13px}
-#bagGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(60px,1fr));gap:8px}
+#bagGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:7px}
+.slot.empty{outline-color:#222c48;background:#0c1326}
 .slot{aspect-ratio:1;background:#101830;border:2px solid #0a0f1b;outline:2px solid #33426a;display:flex;align-items:center;justify-content:center;
   font-size:22px;color:#46598a;position:relative;max-width:100%}
 .slot img{width:75%;height:75%;image-rendering:pixelated}
@@ -140,6 +141,9 @@ button{font:inherit;color:inherit;cursor:pointer}
   color:#fff;text-shadow:1px 1px 0 #000,-1px 1px 0 #000,1px -1px 0 #000,-1px -1px 0 #000}
 .tag.me{color:#fff7a8}
 .tag.npc{color:#9fe3ff}
+.tag.bubble{background:#fffdf4;color:#2a1d10;text-shadow:none;padding:4px 8px;border:2px solid #2a1d10;font-size:11px;max-width:220px;white-space:normal;
+  width:max-content;text-align:center;line-height:1.4}
+.tag.bubble::after{content:'';position:absolute;left:50%;bottom:-7px;margin-left:-5px;border:5px solid transparent;border-top-color:#2a1d10;border-bottom:0}
 .tag.place{font-size:13px;color:var(--gold);background:rgba(10,15,27,.72);
   padding:3px 8px;border:1px solid var(--edge2);text-shadow:1px 1px 0 #000}
 .tag.press{background:#fff7d6;color:#3a2a10;text-shadow:none;padding:2px 6px;border:2px solid #3a2a10;
@@ -322,7 +326,7 @@ function drawChar(ctx, L, dir, frame){
   const bt=L.bottom, b2=shade(bt,-.25), b3=shade(bt,.2);
   const shoe='#3a2a22', white='#f8f3e6', eye='#24181a', mouth='#b85c50', blush='#f2a0a0';
   const ribbon = (L.top==='#c0392b'||L.top==='#e48aa8') ? '#2f4b8f' : '#c0392b';
-  const gold='#e8b83a', type=L.outfit, hs=L.hair;
+  const robe=L.outfit, gold='#e8b83a', type=(robe==='king'||robe==='official')?'dopo':L.outfit, hs=L.hair;
   const pants = type==='dopo' ? '#efe9dc' : bt, pants2 = shade(pants,-.22);
   const f1 = frame===1, f2 = frame===2;
 
@@ -447,7 +451,29 @@ function drawChar(ctx, L, dir, frame){
     P(5,4,10,1,'#4c9a3c');
     [5,7,9,11,13].forEach((x,i)=>{P(x,3,2,2,fl[i]);P(x+1,3,1,1,shade(fl[i],.4))});
   }
-  /* ---------- 장비: 목걸이(메달), 손에 든 물건 ---------- */
+  /* ---------- 곤룡포(왕)·단령(관리)의 흉배와 허리띠 ---------- */
+  if(robe==='king'||robe==='official'){
+    const belt=robe==='king'?'#e8b83a':'#2a2220', badge=robe==='king'?'#e8b83a':'#2f4b8f';
+    if(dir==='down'){P(6,19,8,1,belt);P(8,16,4,3,badge);P(9,17,2,1,robe==='king'?'#c0392b':'#ffffff')}
+    else if(dir==='up'){P(6,19,8,1,belt);P(8,16,4,3,badge)}
+    else{P(7,19,6,1,belt);P(7,16,3,3,badge);P(8,17,1,1,robe==='king'?'#c0392b':'#ffffff')}
+  }
+  if(L.hat==='ikseon'){ // 익선관: 둥근 검은 관, 뒤쪽 위로 솟은 두 날개
+    P(5,2,10,4,'#1d1d22');P(6,1,8,1,'#1d1d22');P(7,2,2,1,'#3a3a44');P(5,5,10,1,'#2c2c34');
+    if(dir==='left'){P(13,0,2,3,'#2c2c34')}else{P(5,0,2,2,'#2c2c34');P(13,0,2,2,'#2c2c34')}
+  }
+  if(L.hat==='samo'){ // 사모: 검은 관, 양옆으로 뻗은 사모뿔
+    P(6,2,8,4,'#1d1d22');P(7,1,6,1,'#1d1d22');P(7,2,2,1,'#3a3a44');P(5,5,10,1,'#2c2c34');
+    if(dir==='left')P(14,3,5,2,'#2c2c34');else{P(1,3,4,2,'#2c2c34');P(15,3,4,2,'#2c2c34')}
+  }
+  /* ---------- 장비: 어사화, 목걸이(메달), 손에 든 물건 ---------- */
+  if(L.head==='eosahwa'){ // 머리 뒤에서 양옆으로 늘어진 종이꽃
+    const fc=['#e9475b','#f2c84b','#3f7fc4','#ffffff','#e98aa6'];
+    const R=[[13,3],[14,2],[15,1],[16,1],[17,2],[18,3],[18,4],[18,5],[18,6],[18,7],[18,8],[18,9],[18,10],[18,11],[18,12],[18,13],[18,14]];
+    const strand=pts=>pts.forEach(([a,b],i)=>P(a,b,1,1,i%2?'#3f8f43':fc[(i>>1)%fc.length]));
+    if(dir==='left')strand(R.map(([a,b])=>[a-1,b]));
+    else{strand(R);strand(R.map(([a,b])=>[SW-1-a,b]))}
+  }
   if(L.neck==='medal'){
     const rb='#2f4b8f', gd='#e8b83a', gl='#f6d36a';
     if(dir==='down'){P(8,15,1,1,rb);P(11,15,1,1,rb);P(8,16,1,1,rb);P(11,16,1,1,rb);P(9,17,2,2,gd);P(9,17,1,1,gl)}
@@ -1024,9 +1050,29 @@ function buildVillage(){
 const view=$('#view'), vx=view.getContext('2d');
 let SCALE=3, VW=0, VH=0, groundCanvas=null, miniBase=null;
 const player={x:28*T,y:24*T+8,dir:'down',walk:0,moving:false,sheet:null};
-const npc={x:24*T+8,y:23*T+12,dir:'down',sheet:null,name:'큐레이터',
+const npc={x:24*T+8,y:23*T+12,dir:'down',sheet:null,name:'큐레이터',id:'curator',
   look:{skin:'#f7d7ba',hair:'bun',hairColor:'#4b3122',hat:'none',outfit:'dopo',top:'#3f8f5a',bottom:'#ece6d6'}};
+// 규장각 앞에서 학문을 논하는 정조와 신하들
+const KING={x:44*T,y:10*T+12,dir:'down',sheet:null,name:'정조',id:'king',cls:'king',
+  look:{skin:'#efc29c',hair:'topknot',hairColor:'#2a2220',hat:'ikseon',outfit:'king',top:'#b0262a',bottom:'#efe9dc'}};
+const NPCS=[npc,KING,
+  {x:41*T+8,y:11*T+12,dir:'right',sheet:null,name:'정약용',id:'jeong',
+   look:{skin:'#efc29c',hair:'topknot',hairColor:'#2a2220',hat:'samo',outfit:'official',top:'#3f8f5a',bottom:'#efe9dc'}},
+  {x:46*T+8,y:11*T+12,dir:'left',sheet:null,name:'박제가',id:'park',
+   look:{skin:'#d9a57c',hair:'topknot',hairColor:'#2a2220',hat:'samo',outfit:'official',top:'#2f4b8f',bottom:'#efe9dc'}},
+  {x:39*T+8,y:11*T+12,dir:'right',sheet:null,name:'이덕무',id:'lee',
+   look:{skin:'#f7d7ba',hair:'topknot',hairColor:'#4b3122',hat:'samo',outfit:'official',top:'#2f4b8f',bottom:'#efe9dc'}},
+];
+// 말풍선으로 오가는 대화 (차례대로 한 사람씩)
+const TALK=[
+  ['king','오늘은 백성을 위한 학문에 대해 이야기해 봅시다.'],
+  ['jeong','전하, 학문은 백성의 삶에 쓸모가 있어야 하옵니다.'],
+  ['park','청나라의 앞선 기술과 문물도 배워야 하옵니다.'],
+  ['lee','신은 책 읽는 기쁨만 한 것이 없사옵니다.'],
+  ['king','좋소. 규장각에서 함께 새 책을 펴냅시다.'],
+];
 const keys={};
+let courtT=0;
 let running=false, dialog=null, lastT=0, waterT=0, toastTimer=0, curPlace='';
 
 function buildGround(){
@@ -1052,7 +1098,7 @@ function makeTags(){
   labelBox.innerHTML='';tags=[];
   const add=addTag;
   add('me',look.name,()=>[player.x,player.y-SH+2]);
-  add('npc',npc.name,()=>[npc.x,npc.y-SH+2]);
+  for(const n of NPCS){n.tag=add('npc',n.name,()=>[n.x,n.y-SH+2]);if(n.id!=='curator'){n.bubble=add('bubble','',()=>[n.x,n.y-SH-12]);n.bubble.style.display='none'}}
   for(const o of objects)if(o.label)o.tagEl=add('place',o.label,()=>[o.x,o.y-o.spr.height-2]);
   pressTag=add('press','Space',()=>pressPos);pressTag.style.display='none';
 }
@@ -1087,7 +1133,7 @@ async function startGame(){
   setTimeout(()=>{
     $('#create').style.display='none';$('#game').style.display='block';
     player.sheet=buildSheet(look);
-    if(!npc.sheet)npc.sheet=buildSheet(npc.look);
+    for(const n of NPCS)if(!n.sheet)n.sheet=buildSheet(n.look);
     if(!groundCanvas){buildGround()}
     makeTags();resize();
     const hf=$('#hudFace').getContext('2d');hf.clearRect(0,0,SW,SH);hf.drawImage(player.sheet.down[0],0,0);
@@ -1118,7 +1164,7 @@ const HB={w:10,h:6}; // 발 밑 충돌 상자
 function blockedAt(px,py){
   const x0=Math.floor((px-HB.w/2)/T), x1=Math.floor((px+HB.w/2-1)/T), y0=Math.floor((py-HB.h)/T), y1=Math.floor((py-1)/T);
   for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){if(x<0||y<0||x>=MW||y>=MH||solid[y][x])return true}
-  if(Math.abs(px-npc.x)<14&&Math.abs(py-npc.y)<9)return true;
+  for(const n of NPCS)if(Math.abs(px-n.x)<14&&Math.abs(py-n.y)<9)return true;
   return false;
 }
 
@@ -1126,7 +1172,7 @@ function blockedAt(px,py){
 function facingPoint(){const d={down:[0,10],up:[0,-12],left:[-12,-3],right:[12,-3]}[player.dir];return [player.x+d[0],player.y+d[1]]}
 function findTarget(){
   const [fx,fy]=facingPoint();
-  if(Math.hypot(fx-npc.x,fy-(npc.y-4))<14)return {kind:'npc'};
+  for(const n of NPCS)if(Math.hypot(fx-n.x,fy-(n.y-4))<14)return {kind:'npc',n};
   const tx=Math.floor(fx/T), ty=Math.floor(fy/T);
   for(const p of PLACES)if(tx>=p.x0&&tx<=p.x1&&ty>=p.y0&&ty<=p.y1&&(['buyongji','welcome','desk','wongaksa','palsangjeon','tower'].includes(p.key)?true:player.dir==='up'))return {kind:'place',p};
   // 연못은 물가 어디서든
@@ -1138,6 +1184,7 @@ function interact(){
   if(towerOpen)return;
   if(dialog){advanceDialog();return}
   const t=findTarget();if(!t)return;
+  if(t.kind==='npc'&&t.n.id!=='curator'){talkCourt(t.n);return}
   if(t.kind==='npc'){
     npc.dir={down:'up',up:'down',left:'right',right:'left'}[player.dir];
     openDialog('큐레이터',[`어서 와요, ${look.name}님! 여기는 조선의 그림과 공예를 만나는 '한국미술사 마을'이에요.`,
@@ -1155,6 +1202,21 @@ function interact(){
     openDialog(i.who,lines);
     setFlag('read_'+key);
   }
+}
+function talkCourt(n){
+  n.dir={down:'up',up:'down',left:'right',right:'left'}[player.dir];
+  if(n.id!=='king'){
+    const say={jeong:['정약용이오. 수원 화성을 쌓을 때 거중기를 설계했지요.','전하께 과거 문제를 청해 보시오. 학문을 겨루어 보는 것도 좋은 공부라오.'],
+               park:['박제가라 하오. 규장각 검서관으로 책을 정리하고 있소.','청나라에 다녀와 『북학의』라는 책을 썼다오.'],
+               lee:['이덕무요. 책만 보는 바보(간서치)라 불릴 만큼 책을 좋아하오.','전하께서 내시는 문제를 맞히면 어사화를 받을 수 있소.']}[n.id];
+    openDialog(n.name,say);return;
+  }
+  const qs=['gwageo1','gwageo2','gwageo3'].filter(k=>!prog.quiz[k]);
+  if(!qs.length){openDialog('정조',['어사화를 쓴 모습이 참으로 늠름하구려.','앞으로도 규장각에서 함께 학문에 힘쓰도록 하시오.']);return}
+  const lines=[`그대가 ${look.name}인가. 규장각에 온 것을 환영하오.`,'마침 신하들과 학문을 논하던 참이었소. 그대도 특별 과거 시험을 보겠소?',
+    '세 문제를 모두 맞히면 급제한 이에게 주는 어사화를 내리겠소.'];
+  qs.forEach((k,i)=>lines.push({...QUIZ[k],key:k,court:true,last:i===qs.length-1}));
+  openDialog('정조',lines);
 }
 let typeTimer=null;
 function openDialog(who,lines){dialog={who,lines,i:0,typing:false};$('#dialog').style.display='block';$('#help').style.visibility='hidden';showLine()}
@@ -1178,7 +1240,9 @@ function answerQuiz(ci){
   if(ci===q.answer){
     prog.quiz[q.key]=true;saveProg();
     d.lines.splice(d.i+1,0,'⭕ 정답이에요! '+(q.explain||''));
-  }else d.lines.splice(d.i+1,0,'❌ 아쉬워요! 설명을 다시 잘 읽고, 한 번 더 살펴보며 도전해 봐요.');
+  }else d.lines.splice(d.i+1,0,q.court?'❌ 아쉽구려. 다시 공부하고 오시오. 다음에 또 시험을 보아도 좋소.':'❌ 아쉬워요! 설명을 다시 잘 읽고, 한 번 더 살펴보며 도전해 봐요.');
+  if(q.last){const ok=['gwageo1','gwageo2','gwageo3'].every(k=>prog.quiz[k]);
+    d.lines.splice(d.i+2,0,ok?'장하오! 그대를 과거 급제자로 인정하노라. 어사화를 내리니 머리에 써 보시오.':'세 문제를 모두 맞혀야 급제할 수 있소. 다시 도전해 보시오.')}
   d.i++;showLine();
   if(ci===q.answer)evalQuests();
 }
@@ -1240,6 +1304,10 @@ function update(dt){
     if(o.moving||dist>1)o.walk+=dt*7.5;else o.walk=0;
   }
   sendPos(false);
+  // 규장각 앞 말풍선
+  courtT+=dt;
+  const ti=Math.floor(courtT/3.4)%TALK.length, [who,txt]=TALK[ti];
+  for(const n of NPCS)if(n.bubble){const on=n.id===who&&!dialog;if(on&&n.bubble.textContent!==txt)n.bubble.textContent=txt;n.bubble.style.display=on?'':'none'}
   // 지금 있는 구역
   const tx=player.x/T, ty=player.y/T;
   const place = ty<17? (tx<20?'조선 초기 전시실 앞':tx>=35?'규장각 · 부용지':'마을 북쪽 길') : ty>27? (tx<20?'조선 중기 전시실 앞':tx>36?'조선 후기 전시실 앞':'마을 남쪽 길') : (tx>20&&tx<35?'마을 광장':'마을 큰길');
@@ -1266,7 +1334,7 @@ function render(){
   // Y 정렬해서 그린다
   const list=[];
   for(const o of objects){if(o.x+o.spr.width/2<cam.x||o.x-o.spr.width/2>cam.x+VW||o.y-o.spr.height>cam.y+VH||o.y<cam.y)continue;list.push(o)}
-  list.push({actor:player,y:player.y},{actor:npc,y:npc.y});
+  list.push({actor:player,y:player.y});for(const n of NPCS)list.push({actor:n,y:n.y});
   for(const o of net.others.values())if(o.seen)list.push({actor:o,y:o.y});
   list.sort((a,b)=>a.y-b.y);
   const pf=player.moving?[1,0,2,0][Math.floor(player.walk)%4]:0;
@@ -1284,13 +1352,13 @@ function render(){
   // 미니맵
   const mm=$('#mini'),mx=mm.getContext('2d');mx.imageSmoothingEnabled=false;mx.drawImage(miniBase,0,0,MW*3,MH*3);
   mx.strokeStyle='rgba(255,255,255,.8)';mx.strokeRect(cam.x/T*3+.5,cam.y/T*3+.5,VW/T*3,VH/T*3);
-  mx.fillStyle='#9fe3ff';mx.fillRect(npc.x/T*3-2,npc.y/T*3-3,4,4);
+  mx.fillStyle='#9fe3ff';for(const n of NPCS)mx.fillRect(n.x/T*3-2,n.y/T*3-3,4,4);
   mx.fillStyle='#d6ffcf';for(const o of net.others.values())if(o.seen)mx.fillRect(o.x/T*3-2,o.y/T*3-3,4,4);
   mx.fillStyle=Math.floor(waterT*3)%2?'#fff7a8':'#ff5a3c';mx.fillRect(player.x/T*3-2,player.y/T*3-3,5,5);
 }
 function loop(t){
   if(!running)return;
-  const dt=Math.min(.05,(t-lastT)/1000);lastT=t;
+  const dt=Math.max(0,Math.min(.05,(t-lastT)/1000));lastT=t;
   update(dt);render();requestAnimationFrame(loop);
 }
 
@@ -1322,6 +1390,7 @@ const ITEMS = {
   book:     {name:'규장각 책',       desc:'규장각에서 펴내고 보관한 책이에요. 정조와 학자들은 이곳에서 많은 책을 펴냈어요.'},
   rubbing:  {name:'석탑 부조 탁본',   desc:'원각사지 십층석탑의 부조를 종이에 떠낸 탁본이에요. 종이를 대고 먹방망이로 두드려 무늬를 옮겨요.'},
   pungyeong:{name:'풍경(風磬)',      desc:'절 건물의 처마 끝에 다는 작은 종이에요. 물고기 모양 추가 바람에 흔들리며 맑은 소리를 내요.'},
+  eosahwa:  {name:'어사화(御賜花)',   desc:'과거에 급제한 사람에게 임금이 내려 준 종이꽃 장식이에요. 모자 뒤에 꽂아 양옆으로 길게 늘어뜨렸어요.'},
   hammer:   {name:'화공의 망치',      desc:'나만의 탑을 끝까지 쌓아 올린 장인에게 주는 망치예요. 돌을 다듬고 나무를 맞추는 데 썼어요.'},
   map:      {name:'마을 탐험 지도',   desc:'세 전시실과 규장각을 모두 찾아간 탐험가에게 주는 지도예요.'},
   knot:     {name:'우정 매듭',       desc:'전통 매듭 공예로 엮은 매듭이에요. 함께 모험한 친구를 기억하게 해 줘요.'},
@@ -1336,6 +1405,12 @@ const QUIZ = {
            explain:'「인왕제색도」, 「금강전도」가 대표적인 진경산수화예요.'},
   kyujang:{q:'창덕궁 후원에 규장각을 세운 조선의 왕은 누구일까요?', choices:['정조','세종','태조'], answer:0,
            explain:'정조는 즉위한 해에 규장각을 세워 학문과 문화를 꽃피웠어요.'},
+  gwageo1:{q:'정조가 수원에 새로 쌓은 성의 이름은 무엇일까요?', choices:['수원 화성','남한산성','한양 도성'], answer:0,
+           explain:'수원 화성을 쌓을 때 정약용이 설계한 거중기가 쓰였어요.'},
+  gwageo2:{q:'규장각에서 책을 정리하고 베껴 쓴, 서얼 출신 학자들의 벼슬 이름은?', choices:['검서관','도화서 화원','암행어사'], answer:0,
+           explain:'박제가, 이덕무, 유득공 등이 규장각 검서관으로 일했어요.'},
+  gwageo3:{q:'정조의 수원 화성 행차를 도화서 화원들이 그린 8폭 병풍은?', choices:['화성능행도','몽유도원도','인왕제색도'], answer:0,
+           explain:'「화성능행도」 병풍에는 행차의 장면이 하나하나 자세히 그려져 있어요.'},
   wongaksa:{q:'원각사지 십층석탑은 어떤 돌로 만들었을까요?', choices:['대리석','화강암','벽돌'], answer:0,
            explain:'흰 대리석이라 섬세한 부조를 새길 수 있었어요.'},
   palsangjeon:{q:'법주사 팔상전은 몇 층짜리 목탑일까요?', choices:['5층','3층','10층'], answer:0,
@@ -1351,15 +1426,16 @@ const QUESTS = [
   {item:'book',     how:'규장각 퀴즈 맞히기',              cond:p=>p.quiz.kyujang},
   {item:'rubbing',  how:'원각사지 십층석탑 퀴즈 맞히기',    cond:p=>p.quiz.wongaksa},
   {item:'pungyeong',how:'법주사 팔상전 퀴즈 맞히기',        cond:p=>p.quiz.palsangjeon},
+  {item:'eosahwa',  how:'규장각 앞 정조의 과거 문제 3개 모두 맞히기', cond:p=>p.quiz.gwageo1&&p.quiz.gwageo2&&p.quiz.gwageo3},
   {item:'hammer',   how:'광장의 짓다 만 탑을 완성하기',     cond:p=>!!p.tower},
   {item:'map',      how:'세 전시실과 규장각에 모두 가 보기',  cond:p=>VISIT_PLACES.every(k=>p.flags['visit_'+k])},
   {item:'knot',     how:'방 코드로 들어가 친구와 함께 있기',  cond:p=>p.flags.friend},
-  {item:'medal',    how:'마을의 퀴즈 6개 모두 맞히기',       cond:p=>Object.keys(QUIZ).every(k=>p.quiz[k])},
+  {item:'medal',    get how(){return `마을의 퀴즈 ${Object.keys(QUIZ).length}개 모두 맞히기`},       cond:p=>Object.keys(QUIZ).every(k=>p.quiz[k])},
 ];
 
 // 몸에 착용할 수 있는 아이템: hand(손에 들기, 하나만) / neck(목에 걸기)
-const EQUIP = {brush:'hand', palette:'hand', hammer:'hand', medal:'neck'};
-const EQUIP_VERB = {hand:['손에 들기','내려놓기'], neck:['목에 걸기','벗기']};
+const EQUIP = {brush:'hand', palette:'hand', hammer:'hand', medal:'neck', eosahwa:'head'};
+const EQUIP_VERB = {hand:['손에 들기','내려놓기'], neck:['목에 걸기','벗기'], head:['머리에 쓰기','벗기']};
 
 /* ── 아이템 그림 (16×16 도트) ── */
 const ICON_DRAW = {
@@ -1370,6 +1446,8 @@ const ICON_DRAW = {
   mukjuk:(P)=>{P(3,1,10,1,'#5a3a1e');P(4,2,8,12,'#b9a77a');P(5,3,6,10,'#f4efe2');P(7,3,1,10,'#1f1f22');P(9,4,1,9,'#6a6a70');P(8,5,2,1,'#1f1f22');P(6,8,1,1,'#1f1f22');P(8,10,2,1,'#1f1f22');P(3,14,10,1,'#5a3a1e')},
   moonjar:(P)=>{pcirc(ICTX,8,9,6,'#f4f1e8');pcirc(ICTX,7,8,4,'#fbf9f3');P(6,1,4,2,'#ece8dc');P(5,1,6,1,'#d9d4c6');P(4,13,8,1,'#d9d4c6')},
   book:(P)=>{P(3,2,10,12,'#2f4b6f');P(3,2,10,1,'#46658f');P(9,3,2,7,'#f3ecd8');P(9,4,2,1,'#2a2220');P(9,6,2,1,'#2a2220');for(const y of [3,6,9,12])P(4,y,1,1,'#e8e2d0');P(3,14,10,1,'#1f3354')},
+  eosahwa:(P)=>{const fc=['#e9475b','#f2c84b','#3f7fc4','#ffffff'];const pts=[[2,14],[2,12],[3,10],[3,8],[4,6],[5,4],[7,2],[9,1],[11,2],[12,4],[13,6],[13,8],[14,10],[14,12]];
+    pts.forEach(([a,b],i)=>{P(a,b,2,2,i%2?'#3f8f43':fc[(i>>1)%4])})},
   hammer:(P)=>{for(let i=0;i<9;i++)P(4+i,13-i,2,1,i%3?'#a8743f':'#8a5a2c');P(8,1,7,4,'#8d8a85');P(8,1,7,1,'#c4c1bb');P(13,2,2,2,'#6f6c67')},
   pungyeong:(P)=>{P(7,1,2,2,'#7a6a3a');P(5,3,6,2,'#a8904a');P(4,5,8,5,'#b89a4a');P(4,5,1,5,'#d9bc6a');P(3,10,10,1,'#8a7a3a');P(7,11,2,2,'#5a4a2a');
     P(5,13,6,2,'#2f6fd0');P(4,13,1,1,'#2f6fd0');P(11,12,1,3,'#2f6fd0');P(6,13,1,1,'#ffffff')},
@@ -1391,7 +1469,7 @@ function itemIcon(id){
 let prog={items:{},flags:{},quiz:{},seen:{},equip:{}};
 function gearLook(){ // 지금 몸에 착용한 것까지 합친 외형
   const e=prog.equip||{};
-  return {...look, hand:(e.hand&&prog.items[e.hand])?e.hand:'none', neck:(e.neck&&prog.items[e.neck])?e.neck:'none'};
+  return {...look, hand:(e.hand&&prog.items[e.hand])?e.hand:'none', neck:(e.neck&&prog.items[e.neck])?e.neck:'none', head:(e.head&&prog.items[e.head])?e.head:'none'};
 }
 function applyGear(){
   player.sheet=buildSheet(gearLook());
@@ -1421,6 +1499,7 @@ function evalQuests(){
 }
 
 /* ── 가방 창 ── */
+const BAG_SIZE=30;
 let bagOpen=false, bagSel=null;
 function updBagBtn(){$('#bagBtn').classList.toggle('has',Object.keys(prog.items).some(k=>!prog.seen[k]))}
 function toggleBag(force){
@@ -1432,7 +1511,7 @@ function toggleBag(force){
 function renderBag(){
   const grid=$('#bagGrid');grid.innerHTML='';
   const total=QUESTS.length, have=QUESTS.filter(q=>prog.items[q.item]).length;
-  $('#bagCount').textContent=`${have} / ${total}개 모음`;
+  $('#bagCount').textContent=`${have} / ${total}개 모음 · ${BAG_SIZE}칸`;
   for(const q of QUESTS){
     const it=ITEMS[q.item];if(!it)continue;
     const has=!!prog.items[q.item];
@@ -1443,6 +1522,7 @@ function renderBag(){
     b.onclick=()=>{bagSel=q.item;renderBag()};
     grid.append(b);
   }
+  for(let i=QUESTS.length;i<BAG_SIZE;i++){const e=document.createElement('div');e.className='slot empty';e.setAttribute('aria-hidden','true');grid.append(e)}
   const info=$('#bagInfo');
   if(!bagSel){info.innerHTML='<span style="color:var(--muted)">칸을 눌러 아이템을 살펴보세요. 물음표 칸은 아직 얻지 못한 아이템이에요.</span>';return}
   const q=QUESTS.find(x=>x.item===bagSel), it=ITEMS[bagSel], has=!!prog.items[bagSel];
@@ -1646,10 +1726,11 @@ function cleanLook(l){
   for(const [k,opt] of Object.entries(OPT))o[k]=opt.items.some(i=>i[0]===l[k])?l[k]:DEFAULT_LOOK[k];
   o.hand=['brush','palette','hammer'].includes(l.hand)?l.hand:'none';
   o.neck=l.neck==='medal'?'medal':'none';
+  o.head=l.head==='eosahwa'?'eosahwa':'none';
   return o;
 }
 function cleanName(n){return (String(n||'').trim().slice(0,8))||'친구'}
-function lookToSend(){const o={};const g=gearLook();for(const k of Object.keys(OPT))o[k]=look[k];o.hand=g.hand;o.neck=g.neck;return o}
+function lookToSend(){const o={};const g=gearLook();for(const k of Object.keys(OPT))o[k]=look[k];o.hand=g.hand;o.neck=g.neck;o.head=g.head;return o}
 
 function joinRoom(code){
   leaveRoom();net.room=code;net.ok=false;updRoomHud();
