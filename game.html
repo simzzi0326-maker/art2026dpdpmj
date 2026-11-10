@@ -94,6 +94,27 @@ button{font:inherit;color:inherit;cursor:pointer}
 .slot.on{outline-color:var(--gold)}
 .slot.worn::before{content:'착용';position:absolute;left:-4px;bottom:-6px;font-size:9px;background:#2f6fd0;color:#fff;padding:1px 3px}
 .equipBtn{margin-top:8px}
+/* 탑 만들기 */
+#towerUI{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(720px,calc(100% - 20px));max-height:calc(100% - 20px);
+  overflow:auto;padding:14px 16px;display:none;flex-direction:column;gap:12px;z-index:4}
+#towerUI .tHead{display:flex;align-items:center;gap:10px}
+#towerUI h2{font-size:18px;font-weight:400;color:var(--gold)}
+#tStep{flex:1;color:var(--muted);font-size:13px}
+#towerUI .tBody{display:flex;gap:14px;align-items:flex-start}
+#tPrev{width:160px;height:340px;flex:0 0 auto;background:linear-gradient(#9fd3f0,#d8eef8 70%,#5aa04a 70%);border:3px solid #0a0f1b}
+#tPanel{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+#tPanel h3{font-size:15px;font-weight:400;color:var(--gold)}
+#tPanel .tip{font-size:12px;color:var(--muted);line-height:1.6}
+.topts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.topt{text-align:left;background:#101830;border:2px solid #33426a;padding:8px 10px;font-size:14px;line-height:1.5}
+.topt small{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.topt.on{border-color:var(--gold);background:#1a2648}
+.topt:focus-visible{outline:2px solid var(--gold)}
+.floorBar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.floorCount{font-size:22px;color:var(--gold);min-width:90px}
+#tName{background:#101830;border:2px solid var(--edge2);color:var(--ink);font:inherit;font-size:15px;padding:8px 10px;outline:none;width:100%;-webkit-user-select:text;user-select:text}
+#towerUI .tNav{display:flex;justify-content:space-between;gap:8px}
+@media (max-width:640px){#towerUI .tBody{flex-direction:column;align-items:center}#tPrev{width:120px;height:255px}}
 .slot.new::after{content:'NEW';position:absolute;right:-4px;top:-8px;font-size:9px;background:#c9483a;color:#fff;padding:1px 3px}
 #bagInfo{background:#101830;border:2px solid #0a0f1b;padding:10px 12px;min-height:84px;font-size:13px;line-height:1.7}
 #bagInfo b{color:var(--gold);font-size:15px;font-weight:400;display:block}
@@ -222,6 +243,11 @@ body.touch #help{display:none}
   <canvas id="mini"></canvas>
   <div id="help">이동: 방향키 / WASD · 달리기: Shift · 살펴보기: Space · 가방: I</div>
   <div id="dialog" class="win"><div class="who"></div><div class="txt"></div><div class="choices"></div><div class="next">▼</div></div>
+  <div id="towerUI" class="win" role="dialog" aria-labelledby="tTitle">
+    <div class="tHead"><h2 id="tTitle">나만의 탑 만들기</h2><span id="tStep"></span><button class="pbtn sub small" id="tClose">닫기</button></div>
+    <div class="tBody"><canvas id="tPrev" width="80" height="170"></canvas><div id="tPanel"></div></div>
+    <div class="tNav"><button class="pbtn sub" id="tBack">◀ 이전</button><button class="pbtn" id="tNext">다음 ▶</button></div>
+  </div>
   <div id="bag" class="win" role="dialog" aria-labelledby="bagTitle">
     <div class="bagHead"><h2 id="bagTitle">가방</h2><span id="bagCount"></span><button class="pbtn sub small" id="bagClose">닫기</button></div>
     <div id="bagGrid"></div>
@@ -427,6 +453,15 @@ function drawChar(ctx, L, dir, frame){
     if(dir==='down'){P(8,15,1,1,rb);P(11,15,1,1,rb);P(8,16,1,1,rb);P(11,16,1,1,rb);P(9,17,2,2,gd);P(9,17,1,1,gl)}
     else if(dir==='up'){P(7,15,6,1,rb)}
     else{P(8,15,1,1,rb);P(7,16,1,1,rb);P(6,17,2,2,gd);P(6,17,1,1,gl)}
+  }
+  if(L.hand==='hammer'){
+    let hx,hy,side;
+    if(dir==='down'){hx=4;hy=20+(f2?1:0);side=-1}else if(dir==='up'){hx=14;hy=20+(f1?1:0);side=1}else{hx=frame===0?9:f1?7:11;hy=20;side=-1}
+    const hd='#a8743f', hm='#8d8a85', hl='#c4c1bb';
+    if(dir==='down'||dir==='up'){const X=v=>side<0?v:SW-1-v;
+      P(X(3),hy-1,1,1,hd);P(X(2),hy-2,1,2,hd);P(X(2),hy-4,1,1,hd);P(side<0?0+1:SW-4,hy-7,3,3,hm);P(side<0?1:SW-4,hy-7,1,1,hl);
+    }else{P(hx-1,hy-1,1,1,hd);P(hx-2,hy-2,1,1,hd);P(hx-3,hy-3,1,1,hd);P(Math.max(1,hx-5),hy-6,3,3,hm);P(Math.max(1,hx-5),hy-6,1,1,hl)}
+    P(hx,hy,2,1,sk);
   }
   if(L.hand==='brush'||L.hand==='palette'){
     // 손 위치: 앞은 화면 왼쪽 손, 뒤는 화면 오른쪽 손, 옆은 보이는 손
@@ -957,6 +992,8 @@ function buildVillage(){
   place(sprWongaksa(),23,20,{x:24*T,label:'원각사지 십층석탑'});block(23,19,24,20);
   place(sprPalsangjeon(),31,20,{x:32*T,label:'법주사 팔상전'});block(31,19,32,20);
   PLACES.push({x0:22,y0:18,x1:25,y1:21,key:'wongaksa'},{x0:30,y0:18,x1:33,y1:21,key:'palsangjeon'});
+  towerSite=place(sprTowerSite(),27,20,{x:28*T,label:'짓다 만 탑'});block(27,19,28,20);
+  PLACES.push({x0:27,y0:19,x1:28,y1:21,key:'tower'});
   for(const [lx,ly] of [[21,17],[34,17],[21,26],[34,26]]){place(sprLamp(),lx,ly);block(lx,ly,lx,ly)}
   place(sprSign(),25,25);block(25,25,25,25);PLACES.push({x0:25,y0:25,x1:25,y1:25,key:'welcome'});
   place(sprDesk(),32,24);block(32,24,32,24);PLACES.push({x0:32,y0:24,x1:32,y1:24,key:'desk'});
@@ -1016,7 +1053,7 @@ function makeTags(){
   const add=addTag;
   add('me',look.name,()=>[player.x,player.y-SH+2]);
   add('npc',npc.name,()=>[npc.x,npc.y-SH+2]);
-  for(const o of objects)if(o.label)add('place',o.label,()=>[o.x,o.y-o.spr.height-2]);
+  for(const o of objects)if(o.label)o.tagEl=add('place',o.label,()=>[o.x,o.y-o.spr.height-2]);
   pressTag=add('press','Space',()=>pressPos);pressTag.style.display='none';
 }
 let pressTag=null, pressPos=[0,0];
@@ -1056,7 +1093,7 @@ async function startGame(){
     const hf=$('#hudFace').getContext('2d');hf.clearRect(0,0,SW,SH);hf.drawImage(player.sheet.down[0],0,0);
     $('#hudName').textContent=look.name;
     $('#hudRoom').textContent='';
-    prog=loadProg(look.name);bagOpen=false;$('#bag').style.display='none';updBagBtn();applyGear();
+    prog=loadProg(look.name);bagOpen=false;$('#bag').style.display='none';updBagBtn();applyGear();refreshTowerSite();
     // 광장 안 빈자리에서 출발 (반 친구들이 한 칸에 겹치지 않게)
     for(let i=0;i<40;i++){const x=(22+Math.random()*12)*T, y=(23+Math.random()*3)*T+8;if(!blockedAt(x,y)){player.x=x;player.y=y;break}}
     player.dir='down';
@@ -1067,7 +1104,7 @@ async function startGame(){
   },450);
 }
 function backToCreate(){
-  running=false;closeDialog();leaveRoom();toggleBag(false);
+  running=false;closeDialog();leaveRoom();toggleBag(false);closeTower();
   $('#fade').style.opacity=1;
   setTimeout(()=>{$('#game').style.display='none';$('#create').style.display='flex';$('#fade').style.opacity=0;requestAnimationFrame(createLoop)},450);
 }
@@ -1091,13 +1128,14 @@ function findTarget(){
   const [fx,fy]=facingPoint();
   if(Math.hypot(fx-npc.x,fy-(npc.y-4))<14)return {kind:'npc'};
   const tx=Math.floor(fx/T), ty=Math.floor(fy/T);
-  for(const p of PLACES)if(tx>=p.x0&&tx<=p.x1&&ty>=p.y0&&ty<=p.y1&&(['buyongji','welcome','desk','wongaksa','palsangjeon'].includes(p.key)?true:player.dir==='up'))return {kind:'place',p};
+  for(const p of PLACES)if(tx>=p.x0&&tx<=p.x1&&ty>=p.y0&&ty<=p.y1&&(['buyongji','welcome','desk','wongaksa','palsangjeon','tower'].includes(p.key)?true:player.dir==='up'))return {kind:'place',p};
   // 연못은 물가 어디서든
   if(at(tx,ty)==='W')return {kind:'place',p:{key:'buyongji'}};
   return null;
 }
 function interact(){
   if(bagOpen){toggleBag(false);return}
+  if(towerOpen)return;
   if(dialog){advanceDialog();return}
   const t=findTarget();if(!t)return;
   if(t.kind==='npc'){
@@ -1106,9 +1144,11 @@ function interact(){
       '왼쪽 위 초기 전시실에서 출발해 왼쪽 아래 중기, 오른쪽 아래 후기 전시실 순서로 돌아보세요.',
       '오른쪽 위에는 정조가 세운 규장각과 연못 부용지가 있어요. 전시실 문 앞에서 Space 키를 눌러 살펴보세요!',
       '설명을 잘 읽고 퀴즈를 맞히면 아이템을 얻어요. 모은 아이템은 가방(I 키)에서 볼 수 있어요.',
+      '광장 가운데에는 짓다 만 탑이 있어요. 재료와 구조를 골라 나만의 탑을 완성해 보세요!',
       '자, 첫 선물이에요. 화원이라면 붓이 있어야죠!']);
     setFlag('talked');
   }else{
+    if(t.p.key==='tower'){openTower();return}
     const key=t.p.key, i=INFO[key], lines=i.lines.slice(), qz=QUIZ[key];
     if(qz&&!prog.quiz[key])lines.push({...qz,key});
     else if(qz)lines.push('이곳의 퀴즈는 이미 맞혔어요! 가방에서 받은 아이템을 확인해 보세요.');
@@ -1153,6 +1193,7 @@ $('#dialog').addEventListener('click',advanceDialog);
 const KEYMAP={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',s:'down',a:'left',d:'right',W:'up',S:'down',A:'left',D:'right'};
 addEventListener('keydown',e=>{
   if(!running)return;
+  if(towerOpen){if(e.key==='Escape')closeTower();return}
   if(KEYMAP[e.key]){keys[KEYMAP[e.key]]=performance.now();e.preventDefault()}
   if(e.key==='Shift')keys.run=true;
   if(dialog&&dialog.quiz&&/^[1-9]$/.test(e.key)){const k=+e.key-1;if(k<dialog.order.length)answerQuiz(dialog.order[k]);e.preventDefault();return}
@@ -1177,7 +1218,7 @@ function update(dt){
   // 가장 최근에 누른 방향키를 따른다 (옛날 RPG처럼 4방향 이동)
   let dir=null,best=-1;for(const d of DIRS)if(keys[d]&&keys[d]>best){best=keys[d];dir=d}
   player.moving=false;
-  if(dir&&!dialog&&!bagOpen){
+  if(dir&&!dialog&&!bagOpen&&!towerOpen){
     player.dir=dir;
     const sp=(keys.run?105:64)*dt, v={down:[0,1],up:[0,-1],left:[-1,0],right:[1,0]}[dir];
     const nx=player.x+v[0]*sp, ny=player.y+v[1]*sp;
@@ -1281,6 +1322,7 @@ const ITEMS = {
   book:     {name:'규장각 책',       desc:'규장각에서 펴내고 보관한 책이에요. 정조와 학자들은 이곳에서 많은 책을 펴냈어요.'},
   rubbing:  {name:'석탑 부조 탁본',   desc:'원각사지 십층석탑의 부조를 종이에 떠낸 탁본이에요. 종이를 대고 먹방망이로 두드려 무늬를 옮겨요.'},
   pungyeong:{name:'풍경(風磬)',      desc:'절 건물의 처마 끝에 다는 작은 종이에요. 물고기 모양 추가 바람에 흔들리며 맑은 소리를 내요.'},
+  hammer:   {name:'화공의 망치',      desc:'나만의 탑을 끝까지 쌓아 올린 장인에게 주는 망치예요. 돌을 다듬고 나무를 맞추는 데 썼어요.'},
   map:      {name:'마을 탐험 지도',   desc:'세 전시실과 규장각을 모두 찾아간 탐험가에게 주는 지도예요.'},
   knot:     {name:'우정 매듭',       desc:'전통 매듭 공예로 엮은 매듭이에요. 함께 모험한 친구를 기억하게 해 줘요.'},
   medal:    {name:'미술사 박사 메달', desc:'마을의 모든 퀴즈를 맞힌 사람만 받을 수 있는 메달이에요. 정말 대단해요!'},
@@ -1309,13 +1351,14 @@ const QUESTS = [
   {item:'book',     how:'규장각 퀴즈 맞히기',              cond:p=>p.quiz.kyujang},
   {item:'rubbing',  how:'원각사지 십층석탑 퀴즈 맞히기',    cond:p=>p.quiz.wongaksa},
   {item:'pungyeong',how:'법주사 팔상전 퀴즈 맞히기',        cond:p=>p.quiz.palsangjeon},
+  {item:'hammer',   how:'광장의 짓다 만 탑을 완성하기',     cond:p=>!!p.tower},
   {item:'map',      how:'세 전시실과 규장각에 모두 가 보기',  cond:p=>VISIT_PLACES.every(k=>p.flags['visit_'+k])},
   {item:'knot',     how:'방 코드로 들어가 친구와 함께 있기',  cond:p=>p.flags.friend},
   {item:'medal',    how:'마을의 퀴즈 6개 모두 맞히기',       cond:p=>Object.keys(QUIZ).every(k=>p.quiz[k])},
 ];
 
 // 몸에 착용할 수 있는 아이템: hand(손에 들기, 하나만) / neck(목에 걸기)
-const EQUIP = {brush:'hand', palette:'hand', medal:'neck'};
+const EQUIP = {brush:'hand', palette:'hand', hammer:'hand', medal:'neck'};
 const EQUIP_VERB = {hand:['손에 들기','내려놓기'], neck:['목에 걸기','벗기']};
 
 /* ── 아이템 그림 (16×16 도트) ── */
@@ -1327,6 +1370,7 @@ const ICON_DRAW = {
   mukjuk:(P)=>{P(3,1,10,1,'#5a3a1e');P(4,2,8,12,'#b9a77a');P(5,3,6,10,'#f4efe2');P(7,3,1,10,'#1f1f22');P(9,4,1,9,'#6a6a70');P(8,5,2,1,'#1f1f22');P(6,8,1,1,'#1f1f22');P(8,10,2,1,'#1f1f22');P(3,14,10,1,'#5a3a1e')},
   moonjar:(P)=>{pcirc(ICTX,8,9,6,'#f4f1e8');pcirc(ICTX,7,8,4,'#fbf9f3');P(6,1,4,2,'#ece8dc');P(5,1,6,1,'#d9d4c6');P(4,13,8,1,'#d9d4c6')},
   book:(P)=>{P(3,2,10,12,'#2f4b6f');P(3,2,10,1,'#46658f');P(9,3,2,7,'#f3ecd8');P(9,4,2,1,'#2a2220');P(9,6,2,1,'#2a2220');for(const y of [3,6,9,12])P(4,y,1,1,'#e8e2d0');P(3,14,10,1,'#1f3354')},
+  hammer:(P)=>{for(let i=0;i<9;i++)P(4+i,13-i,2,1,i%3?'#a8743f':'#8a5a2c');P(8,1,7,4,'#8d8a85');P(8,1,7,1,'#c4c1bb');P(13,2,2,2,'#6f6c67')},
   pungyeong:(P)=>{P(7,1,2,2,'#7a6a3a');P(5,3,6,2,'#a8904a');P(4,5,8,5,'#b89a4a');P(4,5,1,5,'#d9bc6a');P(3,10,10,1,'#8a7a3a');P(7,11,2,2,'#5a4a2a');
     P(5,13,6,2,'#2f6fd0');P(4,13,1,1,'#2f6fd0');P(11,12,1,3,'#2f6fd0');P(6,13,1,1,'#ffffff')},
   rubbing:(P)=>{P(2,1,12,14,'#f7f1e1');P(2,1,12,1,'#d8cfbf');P(7,3,2,2,'#4a4a55');P(5,5,6,1,'#4a4a55');P(6,6,4,2,'#4a4a55');P(4,8,8,1,'#4a4a55');P(5,9,6,2,'#4a4a55');P(3,11,10,1,'#4a4a55');P(4,12,8,2,'#4a4a55')},
@@ -1362,7 +1406,7 @@ function toggleEquip(id){
 }
 function loadProg(name){
   try{const s=JSON.parse(localStorage.getItem('ahq-prog-'+name)||'null');
-    if(s&&typeof s==='object')return {items:s.items||{},flags:s.flags||{},quiz:s.quiz||{},seen:s.seen||{},equip:s.equip||{}}}catch(e){}
+    if(s&&typeof s==='object')return {items:s.items||{},flags:s.flags||{},quiz:s.quiz||{},seen:s.seen||{},equip:s.equip||{},tower:s.tower||null}}catch(e){}
   return {items:{},flags:{},quiz:{},seen:{},equip:{}};
 }
 function saveProg(){try{localStorage.setItem('ahq-prog-'+look.name,JSON.stringify(prog))}catch(e){}}
@@ -1415,6 +1459,175 @@ $('#bagBtn').onclick=()=>toggleBag();
 $('#bagClose').onclick=()=>toggleBag(false);
 
 /* ════════════════════════════════════════════════
+   8-2. 나만의 탑 만들기 (미니게임)
+   ════════════════════════════════════════════════ */
+const TOWER_MAT = {
+  wood:  {name:'목탑',  desc:'나무로 지은 탑. 불에 약해 남은 것이 드물어요. 예) 법주사 팔상전'},
+  brick: {name:'전탑',  desc:'흙을 구운 벽돌로 쌓은 탑. 예) 안동 법흥사지 칠층전탑'},
+  stone: {name:'석탑',  desc:'돌로 만든 탑. 우리나라에 가장 많이 남아 있어요. 예) 원각사지 십층석탑'},
+  metal: {name:'금속탑', desc:'청동이나 금동으로 만든 탑. 작게 만들어 건물 안에 모시기도 했어요.'},
+};
+const TOWER_BASE = {
+  one: {name:'단층 기단',  desc:'한 단으로 된 단정한 기단'},
+  two: {name:'이층 기단',  desc:'두 단으로 쌓은 기단. 통일신라 석탑에 많아요.'},
+  ah:  {name:'亞자형 기단', desc:'위에서 보면 亞자 모양. 원각사지 십층석탑처럼 화려해요.'},
+};
+const TOWER_DECO = {
+  plain: {name:'민무늬',      desc:'아무 무늬 없이 깔끔하게'},
+  lotus: {name:'연꽃 무늬',    desc:'불교를 상징하는 연꽃을 새겨요'},
+  door:  {name:'문 모양(문비)', desc:'탑 안에 사리를 모셨다는 뜻의 문'},
+};
+const TOWER_TOP = {
+  ring:  {name:'보륜',       desc:'바퀴 모양 고리를 여러 개 겹친 장식'},
+  jewel: {name:'보주',       desc:'맨 꼭대기에 올리는 둥근 구슬'},
+  lotus: {name:'앙화와 보주', desc:'위로 핀 연꽃 받침 위에 구슬을 올려요'},
+};
+const TOWER_MAX=10;
+const TPAL = {
+  stone:{b:'#cfcac0',l:'#e6e2da',d:'#a29d93',r:'#c4bfb4',rl:'#ddd8ce',rd:'#9a958b'},
+  brick:{b:'#b5653f',l:'#c97a52',d:'#8a4528',r:'#a35a38',rl:'#c06e48',rd:'#7a3c22'},
+  wood: {b:'#efe7d4',l:'#f7f1e1',d:'#a8432f',r:'#4a5463',rl:'#5f6b7c',rd:'#2c3442'},
+  metal:{b:'#c9a24a',l:'#e8c870',d:'#8a6a2a',r:'#b8923e',rl:'#e0bd62',rd:'#7a5c22'},
+};
+// 탑 모양 계산과 그리기. spec: {mat, base, floors:[deco...], top}
+function towerSprite(spec){
+  const mat=spec.mat||'stone', pal=TPAL[mat], W=80;
+  const floors=spec.floors||[], n=floors.length;
+  const baseH=spec.base==='two'?14:spec.base==='ah'?18:spec.base==='one'?8:0;
+  const fh=i=>(i===0?11:7)+(mat==='wood'?1:0), rh=mat==='wood'?5:mat==='brick'?5:3;
+  let H=4+baseH;for(let i=0;i<n;i++)H+=fh(i)+rh;H+=spec.top?24:2;H=Math.max(H,40);
+  const c=mkCanvas(W,H),x=c.getContext('2d'),P=mkP(x),cx=W/2;
+  let y=H-2;
+  const bw0=28;
+  // 기단
+  const slab=(w,h,notch)=>{const bx=cx-w/2;y-=h;
+    if(notch){P(bx+3,y,w-6,h,pal.b);P(bx,y+2,w,h-4,pal.b)}else P(bx,y,w,h,pal.b);
+    P(bx,y,w,1,pal.l);P(bx,y+h-1,w,1,pal.d);P(bx,y,1,h,pal.l);P(bx+w-1,y,1,h,pal.d);
+    if(mat==='brick')for(let j=y+2;j<y+h-1;j+=2)P(bx+1,j,w-2,1,pal.d);
+    else for(let i=bx+4;i<bx+w-3;i+=6)P(i,y+2,1,h-3,pal.d)};
+  if(spec.base==='one')slab(bw0+14,8);
+  if(spec.base==='two'){slab(bw0+18,7);slab(bw0+12,7)}
+  if(spec.base==='ah'){slab(bw0+20,6,true);slab(bw0+16,6,true);slab(bw0+12,6,true)}
+  // 탑신과 지붕
+  for(let i=0;i<n;i++){
+    const bw=Math.round(bw0-i*1.7), bh=fh(i), bx=Math.round(cx-bw/2);
+    y-=bh;
+    P(bx,y,bw,bh,pal.b);P(bx,y,1,bh,pal.l);P(bx+bw-1,y,1,bh,pal.d);
+    if(mat==='brick')for(let j=y+1;j<y+bh;j+=2)for(let k=bx+((j>>1)%2?1:3);k<bx+bw-1;k+=4)P(k,j,1,1,pal.d);
+    if(mat==='wood'){P(bx,y,2,bh,pal.d);P(bx+bw-2,y,2,bh,pal.d);P(bx,y,bw,1,'#2e8b6a')}
+    else{P(bx+1,y,1,bh,pal.d);P(bx+bw-2,y,1,bh,pal.d)} // 우주(모서리 기둥)
+    const d=floors[i], mx=Math.round(cx);
+    if(d==='door'&&bh>=7){P(mx-3,y+2,6,bh-3,mat==='wood'?'#9a6234':pal.d);P(mx-1,y+2,1,bh-3,pal.b);P(mx-3,y+Math.floor(bh/2),1,1,'#e8c060');P(mx+2,y+Math.floor(bh/2),1,1,'#e8c060')}
+    if(d==='lotus'){const ly=y+Math.floor(bh/2);P(mx-1,ly-2,2,1,'#e98aa6');P(mx-3,ly-1,6,1,'#f2a6b8');P(mx-4,ly,8,1,'#f2a6b8');P(mx-2,ly+1,4,1,'#3f8f43')}
+    // 지붕돌(옥개석) / 기와지붕 / 벽돌 층급
+    const rw=bw+(mat==='wood'?16:10), rx=Math.round(cx-rw/2);
+    y-=rh;
+    if(mat==='brick'){for(let k=0;k<rh;k++){const w=rw-Math.abs(k-2)*3;P(Math.round(cx-w/2),y+k,w,1,k===rh-1?pal.rd:k===0?pal.rl:pal.r)}}
+    else if(mat==='wood'){for(let k=0;k<rh;k++){const w=rw-(rh-1-k)*3;P(Math.round(cx-w/2),y+k,w,1,k===rh-1?pal.rd:pal.r)}
+      P(rx-2,y+1,2,2,pal.r);P(rx+rw,y+1,2,2,pal.r);P(rx-3,y,1,1,pal.rd);P(rx+rw+2,y,1,1,pal.rd);for(let k=rx+2;k<rx+rw-2;k+=3)P(k,y+rh-1,1,1,'#c9c3b8')}
+    else{P(rx,y,rw,rh,pal.r);P(rx,y,rw,1,pal.rl);P(rx,y+rh-1,rw,1,pal.rd);P(rx-1,y-1,2,1,pal.r);P(rx+rw-1,y-1,2,1,pal.r);P(rx+3,y-1,rw-6,1,pal.r)}
+  }
+  // 상륜부
+  if(spec.top&&n){
+    const mc=mat==='stone'?pal:{b:'#b89a4a',l:'#d9bc6a',d:'#7a6a3a'};
+    P(cx-4,y-3,8,3,mc.b);P(cx-4,y-3,8,1,mc.l);y-=3; // 노반
+    pell(x,cx,y-2,3,2,mc.b);y-=4;                  // 복발
+    if(spec.top==='ring'){P(cx-1,y-14,2,14,mc.d);for(let k=0;k<5;k++)P(cx-3,y-2-k*3,6,1,mc.l);P(cx-1,y-17,2,3,mc.b)}
+    if(spec.top==='jewel'){P(cx-1,y-6,2,6,mc.d);pcirc(x,cx,y-10,3,mc.b);P(cx-1,y-12,1,1,mc.l)}
+    if(spec.top==='lotus'){P(cx-1,y-4,2,4,mc.d);P(cx-4,y-7,8,2,'#e98aa6');P(cx-3,y-8,1,1,'#e98aa6');P(cx+2,y-8,1,1,'#e98aa6');pcirc(x,cx,y-12,3,mc.b);P(cx-1,y-14,1,1,mc.l)}
+  }
+  return outline(c);
+}
+function sprTowerSite(){ // 짓다 만 탑: 기단 한 단, 비계, 돌무더기
+  const c=mkCanvas(48,56),x=c.getContext('2d'),P=mkP(x);
+  P(8,44,32,8,'#cfcac0');P(8,44,32,1,'#e6e2da');P(8,51,32,1,'#a29d93');for(let i=12;i<38;i+=6)P(i,46,1,5,'#a29d93');
+  P(14,34,20,10,'#cfcac0');P(14,34,20,1,'#e6e2da');P(15,34,1,10,'#a29d93');P(32,34,1,10,'#a29d93');P(16,32,10,2,'#cfcac0');
+  for(const px of [6,40]){P(px,8,2,44,'#a8743f')}P(6,14,36,2,'#8a5a2c');P(6,28,36,2,'#8a5a2c');P(7,15,1,13,'#c9b98f');P(8,16,1,1,'#c9b98f');
+  for(let k=0;k<12;k++)P(8+k*3,14+k,1,1,'#c9b98f');
+  P(0,48,7,5,'#b3aea4');P(1,46,5,2,'#cfcac0');P(41,49,7,4,'#b3aea4');P(42,47,4,2,'#cfcac0');
+  P(18,6,12,8,'#f3e6c4');P(18,6,12,1,'#8a5a2c');P(20,8,8,1,'#c0392b');P(20,10,6,1,'#5a3a1e');P(23,14,2,4,'#8a5a2c');
+  return outline(c);
+}
+let towerSite=null;
+function refreshTowerSite(){
+  if(!towerSite)return;
+  const t=prog.tower;
+  towerSite.spr=t?towerSprite(t):sprTowerSite();
+  towerSite.label=t?(t.name||'나만의 탑'):'짓다 만 탑';
+  if(towerSite.tagEl)towerSite.tagEl.textContent=towerSite.label;
+}
+
+let towerOpen=false, tStep=0, tSpec=null;
+const T_STEPS=['재료 고르기','기단 고르기','탑신 쌓기','상륜부 고르기','이름 짓고 완성'];
+function openTower(){
+  towerOpen=true;for(const k in keys)delete keys[k];
+  tSpec=prog.tower?JSON.parse(JSON.stringify(prog.tower)):{mat:null,base:null,floors:[],top:null,name:''};
+  tStep=0;tDeco='plain';$('#towerUI').style.display='flex';renderTower();
+}
+function closeTower(){towerOpen=false;$('#towerUI').style.display='none'}
+let tDeco='plain';
+function optButtons(defs,cur,onPick){
+  const box=document.createElement('div');box.className='topts';
+  for(const [k,v] of Object.entries(defs)){const b=document.createElement('button');b.className='topt'+(cur===k?' on':'');
+    b.innerHTML=`${esc(v.name)}<small>${esc(v.desc)}</small>`;b.onclick=()=>{onPick(k);renderTower()};box.append(b)}
+  return box;
+}
+function renderTower(){
+  $('#tStep').textContent=`${tStep+1}/5 · ${T_STEPS[tStep]}`;
+  const pnl=$('#tPanel');pnl.innerHTML='';
+  const h=document.createElement('h3'), tip=document.createElement('p');tip.className='tip';
+  if(tStep===0){h.textContent='어떤 재료로 탑을 지을까요?';tip.textContent='탑은 부처의 사리를 모시려고 세운 건축물이에요. 재료에 따라 목탑, 전탑, 석탑, 금속탑으로 나눠요.';
+    pnl.append(h,optButtons(TOWER_MAT,tSpec.mat,k=>tSpec.mat=k),tip)}
+  if(tStep===1){h.textContent='탑을 받칠 기단을 골라요';tip.textContent='기단은 탑을 받치는 맨 아래 부분이에요. 탑은 기단 · 탑신 · 상륜부, 세 부분으로 이루어져요.';
+    pnl.append(h,optButtons(TOWER_BASE,tSpec.base,k=>tSpec.base=k),tip)}
+  if(tStep===2){
+    h.textContent='1층부터 탑신을 쌓아 올려요';
+    const deco=optButtons(TOWER_DECO,tDeco,k=>tDeco=k);
+    const bar=document.createElement('div');bar.className='floorBar';
+    const cnt=document.createElement('span');cnt.className='floorCount';cnt.textContent=`${tSpec.floors.length} / ${TOWER_MAX}층`;
+    const add=document.createElement('button');add.className='pbtn';add.textContent=`${tSpec.floors.length+1}층 쌓기`;add.disabled=tSpec.floors.length>=TOWER_MAX;
+    if(add.disabled)add.textContent='최대 10층';
+    add.onclick=()=>{if(tSpec.floors.length<TOWER_MAX){tSpec.floors.push(tDeco);renderTower()}};
+    const rm=document.createElement('button');rm.className='pbtn sub';rm.textContent='맨 위층 빼기';rm.disabled=!tSpec.floors.length;
+    rm.onclick=()=>{tSpec.floors.pop();renderTower()};
+    bar.append(cnt,add,rm);
+    tip.textContent='층마다 무늬를 골라 쌓을 수 있어요. 위로 갈수록 조금씩 좁아져요. 우리나라 탑은 3·5·7·9층처럼 홀수 층이 많아요.';
+    const lbl=document.createElement('p');lbl.className='tip';lbl.textContent='다음에 쌓을 층의 무늬';
+    pnl.append(h,lbl,deco,bar,tip)}
+  if(tStep===3){h.textContent='꼭대기 상륜부를 골라요';tip.textContent='상륜부는 탑 꼭대기의 장식이에요. 노반, 복발 위에 보륜이나 보주 같은 장식을 올려요.';
+    pnl.append(h,optButtons(TOWER_TOP,tSpec.top,k=>tSpec.top=k),tip)}
+  if(tStep===4){
+    h.textContent='탑에 이름을 붙여 주세요';
+    const inp=document.createElement('input');inp.id='tName';inp.maxLength=16;
+    inp.value=tSpec.name||`${look.name}의 ${tSpec.floors.length}층 ${TOWER_MAT[tSpec.mat].name}`;
+    inp.oninput=()=>{tSpec.name=inp.value};tSpec.name=inp.value;
+    tip.textContent=`${TOWER_MAT[tSpec.mat].name} · ${TOWER_BASE[tSpec.base].name} · ${tSpec.floors.length}층 · 상륜부 ${TOWER_TOP[tSpec.top].name}`;
+    pnl.append(h,inp,tip);
+  }
+  const ok=[!!tSpec.mat,!!tSpec.base,tSpec.floors.length>0,!!tSpec.top,true][tStep];
+  $('#tBack').style.visibility=tStep?'':'hidden';
+  const nx=$('#tNext');nx.textContent=tStep===4?'탑 완성하기 ★':'다음 ▶';nx.disabled=!ok;nx.style.opacity=ok?1:.5;
+  drawTowerPreview();
+}
+function drawTowerPreview(){
+  const cv=$('#tPrev'),x=cv.getContext('2d');x.clearRect(0,0,cv.width,cv.height);x.imageSmoothingEnabled=false;
+  const spec={...tSpec,mat:tSpec.mat||'stone',floors:tSpec.floors.length?tSpec.floors:(tStep<2?['plain']:[])};
+  const spr=(tSpec.mat||tSpec.floors.length)?towerSprite(spec):sprTowerSite();
+  const sc=spr.height>cv.height-24?(cv.height-24)/spr.height:1;
+  const w=Math.round(spr.width*sc),h=Math.round(spr.height*sc);
+  x.drawImage(spr,Math.round(cv.width/2-w/2),cv.height-50-h+Math.round(4*sc),w,h);
+}
+$('#tClose').onclick=closeTower;
+$('#tBack').onclick=()=>{if(tStep>0){tStep--;renderTower()}};
+$('#tNext').onclick=()=>{
+  if(tStep<4){tStep++;renderTower();return}
+  tSpec.name=(tSpec.name||'').trim().slice(0,16)||'나만의 탑';
+  prog.tower=JSON.parse(JSON.stringify(tSpec));saveProg();refreshTowerSite();closeTower();
+  toast(`<b style="color:var(--gold)">${esc(prog.tower.name)}</b> 완성!<br><small style="color:var(--muted)">짓다 만 탑이 나만의 탑으로 바뀌었어요</small>`,2600);
+  setTimeout(evalQuests,2700);
+};
+
+/* ════════════════════════════════════════════════
    9. 함께하기 (Supabase 실시간: 방 코드별 채널)
    방 코드는 실시간 퀴즈와 같은 quiz_rooms 표를 씁니다.
    ════════════════════════════════════════════════ */
@@ -1431,7 +1644,7 @@ async function roomExists(code){
 function cleanLook(l){
   const o={};l=l&&typeof l==='object'?l:{};
   for(const [k,opt] of Object.entries(OPT))o[k]=opt.items.some(i=>i[0]===l[k])?l[k]:DEFAULT_LOOK[k];
-  o.hand=['brush','palette'].includes(l.hand)?l.hand:'none';
+  o.hand=['brush','palette','hammer'].includes(l.hand)?l.hand:'none';
   o.neck=l.neck==='medal'?'medal':'none';
   return o;
 }
