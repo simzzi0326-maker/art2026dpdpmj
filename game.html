@@ -598,10 +598,11 @@ function sprTree(seed, kind){
   const c=mkCanvas(34,46), x=c.getContext('2d'), r=mulberry32(seed);
   const P=(a,b,w,h,col)=>{x.fillStyle=col;x.fillRect(a,b,w,h)};
   P(14,30,6,14,'#6b4a2f');P(14,30,2,14,'#56391f');P(18,32,1,10,'#86603d');P(12,42,3,2,'#6b4a2f');P(19,42,3,2,'#6b4a2f');
-  if(kind==='plum'){ // 매화나무
+  if(kind==='plum'||kind==='peach'){ // 매화(흰 꽃) · 복숭아나무(분홍 꽃)
+    const pc=kind==='plum'?['#e6e0e4','#f4f0f2','#ffffff','#e7a3b5']:['#e9a6bd','#f4c0d1','#fde3ec','#d9809e'];
     P(10,24,3,2,'#56391f');P(20,22,4,2,'#56391f');
-    pcirc(x,17,17,13,'#e9a6bd');pcirc(x,14,14,10,'#f4c0d1');pcirc(x,12,11,5,'#fde3ec');
-    for(let i=0;i<26;i++){const a=5+r()*24|0,b=5+r()*22|0;P(a,b,1,1,r()<.5?'#ffffff':'#d9809e')}
+    pcirc(x,17,17,13,pc[0]);pcirc(x,14,14,10,pc[1]);pcirc(x,12,11,5,pc[2]);
+    for(let i=0;i<26;i++){const a=5+r()*24|0,b=5+r()*22|0;P(a,b,1,1,r()<.5?'#ffffff':pc[3])}
   }else if(kind==='pine'){
     for(let i=0;i<4;i++){const top=3+i*7;for(let k=0;k<12;k++){const w=1+k+i;P(17-w,top+k,w*2,1,k>9?'#245a31':i%2?'#2e6a3c':'#367a44')}}
     for(let i=0;i<20;i++)P(6+r()*22|0,4+r()*28|0,2,1,'#245a31');
@@ -648,81 +649,190 @@ function sprPagoda(){ // 삼층석탑
   return outline(c,[40,36,32]);
 }
 
-function sprHanok(){ // 9×7 타일
-  const W=144,H=112,c=mkCanvas(W,H),x=c.getContext('2d'),P=(a,b,w,h,col)=>{x.fillStyle=col;x.fillRect(a,b,w,h)};
-  // 기단
-  P(6,96,132,14,'#a9a39a');P(6,96,132,2,'#c6c0b6');for(let i=6;i<138;i+=16)P(i,98,1,12,'#8a847b');P(6,103,132,1,'#8a847b');
-  P(58,104,28,8,'#bdb7ac');P(58,104,28,1,'#d6d0c5'); // 계단
-  // 벽과 기둥
-  P(12,52,120,44,'#efe7d4');
-  const posts=[12,40,58,86,104,128];
-  for(const p of posts){P(p,50,5,46,'#7a4e2c');P(p,50,1,46,'#9a6a40')}
-  P(12,50,124,3,'#6b4226');P(12,72,120,2,'#7a4e2c');
-  // 창살 창문
-  const win=(wx,wy,ww,wh)=>{P(wx,wy,ww,wh,'#f7efdc');x.fillStyle='#b88a5a';for(let i=wx;i<wx+ww;i+=4)x.fillRect(i,wy,1,wh);for(let j=wy;j<wy+wh;j+=4)x.fillRect(wx,j,ww,1);P(wx-1,wy-1,ww+2,1,'#7a4e2c');P(wx-1,wy+wh,ww+2,1,'#7a4e2c')};
-  win(20,58,16,30);win(110,58,14,30);
-  // 문
-  P(63,56,22,40,'#8a5a32');win(65,58,8,34);win(75,58,8,34);P(73,56,2,40,'#6b4226');
-  // 단청
-  P(10,46,124,4,'#3d8a6a');for(let i=12;i<132;i+=6){P(i,47,2,2,'#c0392b');P(i+3,46,1,1,'#f2c84b')}
-  // 지붕 (기와)
-  // 처마 곡선: 아래로 갈수록 넓어지고 양 끝이 살짝 들린다
-  const half=y=>{const t=(y-14)/31;return Math.round(46+26*Math.pow(t,1.8))};
-  for(let y=14;y<=45;y++){const h=half(y);P(72-h,y,h*2,1,'#4a5560');P(72-h,y,2,1,'#3a434c');P(72+h-2,y,2,1,'#3a434c')}
-  for(let i=4;i<140;i+=4)for(let y=15;y<=44;y++){const h=half(y);if(i>=72-h+2&&i<72+h-2)P(i,y,1,1,'#5d6a76')}
-  for(let k=0;k<8;k++){const lift=Math.round(k*k/12);P(k,45-lift-2,2,3,'#4a5560');P(142-k,45-lift-2,2,3,'#4a5560')}
-  P(4,44,136,2,'#363e47');P(4,43,136,1,'#7b8794');
-  for(let i=8;i<136;i+=4)P(i,44,2,2,'#c9c3b8'); // 막새 기와 끝
-  // 용마루
-  P(20,8,104,7,'#3a434c');P(20,8,104,1,'#58636f');P(14,4,8,8,'#3a434c');P(122,4,8,8,'#3a434c');P(14,3,3,2,'#3a434c');P(127,3,3,2,'#3a434c');
+/* ── 한국 전통 건물 공통 도구 ── */
+const mkP=x=>(a,b,w,h,col)=>{x.fillStyle=col;x.fillRect(a,b,w,h)};
+// 기와지붕: 맞배(curve 1, lift 0) / 팔작(곡선 + 처마 끝 들림)
+function giwaRoof(P,{cx,y0,y1,top,bot,curve=1,lift=0,ridge,base='#4a5560',line='#5d6a76',edge='#3a434c',eave='#363e47',tileEnd='#c9c3b8'}){
+  const half=y=>{const t=(y-y0)/(y1-y0);return Math.round(top+(bot-top)*Math.pow(t,curve))};
+  for(let y=y0;y<=y1;y++){const h=half(y);P(cx-h,y,h*2,1,base);P(cx-h,y,2,1,edge);P(cx+h-2,y,2,1,edge)}
+  for(let i=cx-bot+4;i<cx+bot-3;i+=4)for(let y=y0+1;y<y1-1;y++){const h=half(y);if(i>=cx-h+2&&i<cx+h-2)P(i,y,1,1,line)}
+  for(let k=0;k<lift;k++){const rise=Math.round((lift-k)*(lift-k)/(lift*1.4));P(cx-bot-lift+k,y1-rise-2,2,3,base);P(cx+bot+lift-k-2,y1-rise-2,2,3,base)}
+  if(lift){P(cx-bot-lift,y1-Math.round(lift/1.4)-3,2,1,edge);P(cx+bot+lift-2,y1-Math.round(lift/1.4)-3,2,1,edge)}
+  P(cx-bot,y1-1,bot*2,2,eave);P(cx-bot,y1-2,bot*2,1,'#7b8794');
+  for(let i=cx-bot+3;i<cx+bot-3;i+=4)P(i,y1-1,2,2,tileEnd);
+  const rw=ridge||top;
+  P(cx-rw,y0-6,rw*2,7,edge);P(cx-rw,y0-6,rw*2,1,'#58636f');
+  P(cx-rw-4,y0-10,7,9,edge);P(cx+rw-3,y0-10,7,9,edge);P(cx-rw-4,y0-10,7,1,'#58636f');P(cx+rw-3,y0-10,7,1,'#58636f');
+}
+// 띠살 창호
+function lattice(P,x,y,w,h,paper='#f7efdc',wood='#b88a5a',frame='#7a4e2c'){
+  P(x,y,w,h,paper);for(let i=x+1;i<x+w;i+=3)P(i,y,1,h,wood);
+  for(const fy of [y+3,y+(h>>1),y+h-4])P(x,fy,w,2,wood);
+  P(x-1,y-1,w+2,1,frame);P(x-1,y+h,w+2,1,frame);P(x-1,y,1,h,frame);P(x+w,y,1,h,frame);
+}
+// 꽃살문 (조선 후기 화려한 문)
+function flowerDoor(P,x,y,w,h){
+  P(x,y,w,h,'#9a6234');
+  for(let j=y+2;j<y+h-2;j+=5)for(let i=x+2;i<x+w-2;i+=5){P(i+1,j,2,4,'#e8c060');P(i,j+1,4,2,'#e8c060');P(i+1,j+1,2,2,'#c0392b');}
+  P(x,y,w,1,'#5a3a1e');P(x,y+h-1,w,1,'#5a3a1e');P(x+(w>>1),y,1,h,'#5a3a1e');
+}
+// 기단과 계단
+function stoneBase(P,x,y,w,h,cx,sw){
+  P(x,y,w,h,'#a9a39a');P(x,y,w,2,'#c6c0b6');P(x,y+h-1,w,1,'#8a847b');
+  for(let i=x;i<x+w;i+=16)P(i,y+2,1,h-3,'#8a847b');P(x,y+(h>>1),w,1,'#8a847b');
+  P(cx-sw,y+4,sw*2,h+2,'#bdb7ac');for(let k=y+4;k<y+h+2;k+=3)P(cx-sw,k,sw*2,1,'#d6d0c5');
+  P(cx-sw-2,y+2,2,h+4,'#8f8a80');P(cx+sw,y+2,2,h+4,'#8f8a80');
+}
+const PILLARS=[12,36,58,82,104,128];
+function pillars(P,y0,y1,col='#7a4e2c',hi='#9a6a40'){for(const p of PILLARS){P(p,y0,4,y1-y0,col);P(p,y0,1,y1-y0,hi)}}
+
+/* ── 조선 초기 전시실: 맞배지붕 · 주심포 · 「몽유도원도」 두루마리 ── */
+function sprHallEarly(){
+  const W=144,H=120,c=mkCanvas(W,H),x=c.getContext('2d'),P=mkP(x),r=mulberry32(11);
+  stoneBase(P,6,102,132,14,72,12);
+  P(12,56,120,46,'#efe7d4');
+  pillars(P,52,102);
+  P(10,52,124,4,'#6b4226');
+  // 창호와 문
+  lattice(P,18,80,16,20);lattice(P,42,80,14,20);lattice(P,88,80,14,20);lattice(P,110,80,16,20);
+  P(62,76,20,26,'#8a5a32');lattice(P,64,78,7,22);lattice(P,73,78,7,22);
+  // 주심포: 기둥 위에만 공포
+  for(const p of PILLARS){P(p-3,47,10,3,'#7a5536');P(p-1,44,6,3,'#7a5536');P(p-2,47,8,1,'#5f8f7a')}
+  P(8,50,128,2,'#5f8f7a');P(8,49,128,1,'#e8e2d0'); // 은은한 긋기단청
+  // 맞배지붕(곧은 처마) + 양 끝 풍판
+  giwaRoof(P,{cx:72,y0:16,y1:46,top:62,bot:70,curve:1,lift:0,ridge:58});
+  P(0,30,4,18,'#7a5536');P(140,30,4,18,'#7a5536');P(0,30,4,1,'#5a3a1e');P(140,30,4,1,'#5a3a1e');
+  // 긴 두루마리 그림 「몽유도원도」
+  P(14,56,4,22,'#5a3a1e');P(126,56,4,22,'#5a3a1e');
+  P(18,58,108,18,'#eadfc4');P(18,58,108,1,'#c9b98f');P(18,75,108,1,'#c9b98f');
+  // 왼쪽: 현실 세계의 낮은 언덕
+  for(let i=0;i<34;i++){const hh=3+Math.round(Math.sin(i/5)*2+2);P(20+i,74-hh,1,hh,'#a9b5a0')}
+  // 오른쪽: 기이한 바위산과 복숭아꽃(도원)
+  const peak=(px,ph,pw)=>{for(let k=0;k<ph;k++){const w=Math.max(1,Math.round(pw*k/ph));P(px-w,60+(16-ph)+k,w*2,1,k%3?'#8d9ea3':'#76888d')}P(px-1,60+(16-ph),2,2,'#5d6d72')};
+  [[58,12,4],[66,15,5],[74,11,3],[82,16,5],[91,13,4],[99,15,5],[108,12,4],[117,14,4]].forEach(([a,b,w])=>peak(a,b,w));
+  for(let i=0;i<40;i++){const a=60+r()*62|0,b=66+r()*8|0;P(a,b,1,1,r()<.7?'#f2a6b8':'#7aa58f')}
+  P(87,62,1,10,'#ffffff'); // 폭포
+  P(22,60,2,2,'#b23a2a');P(122,61,2,2,'#b23a2a'); // 낙관
   return outline(c);
 }
-function sprTemple(){ // 그리스 신전 9×7
-  const W=144,H=112,c=mkCanvas(W,H),x=c.getContext('2d'),P=(a,b,w,h,col)=>{x.fillStyle=col;x.fillRect(a,b,w,h)};
-  const m='#ece6da',m2='#c9c0b0',m3='#fffaf0';
-  P(0,102,144,10,m);P(0,102,144,1,m3);P(4,96,136,6,m);P(4,96,136,1,m3);P(8,90,128,6,m);P(8,90,128,1,m3);P(0,111,144,1,m2);
-  P(12,42,120,48,'#6a5e52');P(60,52,24,38,'#3f362f');
-  for(let i=0;i<6;i++){const cx=16+i*22;P(cx,44,10,46,m);P(cx+2,44,1,46,m2);P(cx+5,44,1,46,m2);P(cx+8,44,1,46,m2);P(cx,44,1,46,m3);P(cx-2,41,14,3,m);P(cx-2,41,14,1,m3);P(cx-1,88,12,2,m2)}
-  P(8,30,128,11,m);P(8,30,128,1,m3);P(8,40,128,1,m2);
-  for(let i=12;i<132;i+=8){P(i,32,2,6,m2);P(i+3,32,1,6,m2)}
-  for(let y=6;y<30;y++){const half=Math.round((y-6)/24*70);P(72-half,y,half*2,1,m)}
-  for(let y=12;y<28;y++){const half=Math.round((y-12)/16*56);P(72-half,y,half*2,1,'#d8cfbf')}
-  P(66,20,12,6,'#bdb3a2');P(70,17,4,3,'#bdb3a2'); // 박공 조각
-  P(4,29,136,1,m2);
+/* ── 조선 중기 전시실: 수묵 · 묵죽과 묵매 족자 · 단청 없는 소박한 집 ── */
+function sprHallMiddle(){
+  const W=144,H=120,c=mkCanvas(W,H),x=c.getContext('2d'),P=mkP(x),r=mulberry32(23);
+  stoneBase(P,6,102,132,14,72,12);
+  P(12,56,120,46,'#f1ece0');
+  pillars(P,52,102,'#6a4b33','#8a6a4c');
+  P(10,52,124,4,'#5a3e28');
+  // 익공: 기둥 위 날개 모양 (칠하지 않은 나무)
+  for(const p of PILLARS){P(p-4,47,12,3,'#8a6a4c');P(p-2,44,8,3,'#8a6a4c');P(p+5,48,4,2,'#6a4b33')}
+  P(8,50,128,2,'#8a6a4c');
+  giwaRoof(P,{cx:72,y0:16,y1:46,top:50,bot:70,curve:1.5,lift:5,ridge:46,base:'#45494f',line:'#585d64',edge:'#34373c',eave:'#2c2f33',tileEnd:'#bfbcb4'});
+  // 족자 걸이
+  const scroll=(x0,y0,w,h)=>{P(x0-2,y0-3,w+4,2,'#3a2a1e');P(x0,y0-1,w,h+2,'#b9a77a');P(x0+2,y0+1,w-4,h-2,'#f4efe2');P(x0-2,y0+h+1,w+4,2,'#3a2a1e')};
+  // 왼쪽: 묵죽(먹의 진하고 옅음)
+  scroll(18,60,36,38);
+  const bamboo=(bx,col)=>{for(let y=62;y<97;y++)P(bx,y,2,1,col);for(let y=66;y<96;y+=7)P(bx,y,2,1,'#f4efe2')};
+  bamboo(40,'#9a9aa0');bamboo(27,'#1f1f22');bamboo(33,'#3a3a40');
+  const leaf=(lx,ly,d)=>{for(let k=0;k<5;k++)P(lx+d*k,ly+(k>>1),1,1,'#1f1f22')};
+  leaf(29,64,1);leaf(29,70,1);leaf(26,67,-1);leaf(35,63,1);leaf(35,75,1);leaf(32,80,-1);leaf(42,70,1);leaf(29,86,1);
+  // 오른쪽: 묵매
+  scroll(90,60,36,38);
+  for(let k=0;k<26;k++)P(94+k,94-k,2,2,'#2a2522');
+  for(let k=0;k<10;k++)P(104+k,82-(k>>1)+0,1,1,'#2a2522');for(let k=0;k<8;k++)P(110-(k>>1),76-k,1,1,'#2a2522');
+  for(const [fx,fy] of [[100,85],[107,78],[114,74],[118,72],[108,69],[112,79],[104,90],[121,68]]){P(fx-1,fy,3,1,'#2a2522');P(fx,fy-1,1,3,'#2a2522');P(fx,fy,1,1,'#f7d6dd')}
+  // 가운데 널판문
+  P(62,62,20,40,'#7a5536');P(62,62,20,1,'#5a3e28');P(71,62,2,40,'#5a3e28');for(let y=66;y<100;y+=6)P(63,y,18,1,'#6a4b33');
+  P(68,82,2,2,'#c9c3b8');P(74,82,2,2,'#c9c3b8');
   return outline(c);
 }
-function sprPyramid(){ // 8×6
-  const W=128,H=100,c=mkCanvas(W,H),x=c.getContext('2d'),P=(a,b,w,h,col)=>{x.fillStyle=col;x.fillRect(a,b,w,h)};
-  for(let y=6;y<98;y++){const half=Math.round((y-6)/92*62);P(64-half,y,half,1,'#e2bf72');P(64,y,half,1,'#b8924c')}
-  for(let y=12;y<98;y+=6){const half=Math.round((y-6)/92*62);P(64-half,y,half,1,'#c9a35a');P(64,y,half,1,'#9a7a3c')}
-  P(60,2,8,6,'#f2d58f');P(64,2,4,6,'#d9b56a');
-  P(54,78,20,20,'#3a2a18');P(56,76,16,2,'#3a2a18');P(58,74,12,2,'#3a2a18');P(54,78,2,20,'#c9a35a');P(72,78,2,20,'#9a7a3c');
-  // 상형문자 장식
-  const g=(a,b)=>{P(a,b,2,4,'#6b4a20');P(a+3,b+1,3,1,'#6b4a20')};g(40,70);g(48,64);g(80,68);
+/* ── 조선 후기 전시실: 다포 · 화려한 단청 · 진경산수와 민화 · 꽃살문 ── */
+function sprHallLate(){
+  const W=144,H=120,c=mkCanvas(W,H),x=c.getContext('2d'),P=mkP(x),r=mulberry32(37);
+  stoneBase(P,4,102,136,14,72,14);
+  P(12,56,120,46,'#efe7d4');
+  pillars(P,52,102,'#a8432f','#c45a42');
+  P(10,52,124,4,'#2e8b6a');P(10,53,124,1,'#f2c84b');
+  // 다포: 기둥 사이에도 촘촘한 공포 + 화려한 단청
+  for(let i=10;i<134;i+=8){P(i,43,6,3,'#2e8b6a');P(i+1,46,4,3,'#2f5fa8');P(i+2,49,2,3,'#c0392b');P(i+2,43,2,1,'#f2c84b')}
+  P(8,40,128,3,'#2f5fa8');for(let i=10;i<134;i+=6){P(i,41,2,1,'#f2c84b');P(i+3,41,1,1,'#ffffff')}
+  giwaRoof(P,{cx:72,y0:12,y1:41,top:46,bot:70,curve:1.9,lift:10,ridge:44,base:'#4a5463',line:'#5f6b7c',edge:'#384252',eave:'#2c3442'});
+  // 왼쪽: 진경산수(검은 바위산과 흰 안개)
+  P(16,58,40,40,'#7a4e2c');P(18,60,36,36,'#ece2c8');
+  pell(x,36,74,16,12,'#2e3033');pell(x,28,70,8,9,'#45484d');pell(x,44,72,9,10,'#3a3c40');P(30,62,4,6,'#2e3033');
+  for(let i=0;i<14;i++)P(22+r()*30|0,66+r()*14|0,1,3,'#5e6166');
+  P(18,82,36,4,'#f7f2e6');P(22,81,20,1,'#f7f2e6'); // 안개
+  for(const tx of [22,27,45,50]){P(tx,88,1,6,'#3a2a1e');P(tx-2,87,5,2,'#2f5a33');P(tx-1,85,3,2,'#2f5a33')}
+  P(18,94,36,2,'#9aa08a');
+  // 오른쪽: 민화 호작도(호랑이와 까치)
+  P(88,58,40,40,'#7a4e2c');P(90,60,36,36,'#f1e3c0');
+  P(92,62,32,2,'#5a3a1e');for(let i=93;i<122;i+=4){P(i,60,3,2,'#3f6b3a');P(i+1,64,2,2,'#3f6b3a')}
+  P(110,65,5,3,'#1f2433');P(112,66,2,1,'#ffffff');P(114,66,2,1,'#2f5fa8');P(115,67,2,1,'#1f2433'); // 까치
+  P(96,78,22,12,'#e89a2c');P(112,72,10,10,'#e89a2c');P(98,90,3,4,'#e89a2c');P(112,90,3,4,'#e89a2c');P(94,76,3,2,'#e89a2c');P(92,74,2,2,'#e89a2c');
+  for(let i=98;i<118;i+=3)P(i,79,1,6,'#2a2220');P(113,74,1,2,'#2a2220');P(119,74,1,2,'#2a2220');
+  P(114,75,2,2,'#ffffff');P(118,75,2,2,'#ffffff');P(115,76,1,1,'#2a2220');P(119,76,1,1,'#2a2220');P(116,79,3,1,'#c0392b');
+  // 가운데 꽃살문
+  flowerDoor(P,62,60,20,42);
   return outline(c);
 }
-function sprCave(){ // 7×6
-  const W=112,H=96,c=mkCanvas(W,H),x=c.getContext('2d'),P=(a,b,w,h,col)=>{x.fillStyle=col;x.fillRect(a,b,w,h)};
-  pell(x,56,62,54,34,'#857462');pell(x,40,52,30,22,'#97856f');pell(x,74,46,26,24,'#8e7c67');pell(x,50,36,22,14,'#a8967e');
-  const r=mulberry32(5);for(let i=0;i<60;i++)P(6+r()*100|0,28+r()*64|0,2,1,r()<.5?'#6e5f4f':'#b3a28a');
-  pell(x,56,30,26,6,'#5a9a46');pell(x,40,30,10,3,'#6fb257');pell(x,80,34,8,3,'#5a9a46');
-  // 동굴 입구
-  pell(x,56,80,18,20,'#1e1712');P(38,80,37,16,'#1e1712');pell(x,56,82,14,16,'#0f0b08');P(42,82,29,14,'#0f0b08');
-  // 벽화: 들소와 손바닥
-  P(14,60,12,5,'#a3412b');P(12,61,3,3,'#a3412b');P(15,65,1,4,'#a3412b');P(24,65,1,4,'#a3412b');P(25,59,2,2,'#a3412b');P(13,59,1,2,'#a3412b');
-  P(88,56,4,5,'#c45a33');P(87,52,1,4,'#c45a33');P(89,51,1,5,'#c45a33');P(91,52,1,4,'#c45a33');P(93,55,1,3,'#c45a33');
-  return outline(c,[40,30,24]);
+/* ── 규장각(주합루): 2층 누각 ── */
+function sprKyujanggak(){
+  const W=128,H=140,c=mkCanvas(W,H),x=c.getContext('2d'),P=mkP(x);
+  const PL=[8,32,52,72,92,116];
+  stoneBase(P,2,118,124,16,64,12);
+  // 아래층 (규장각)
+  P(8,84,112,34,'#efe7d4');
+  for(const p of PL){P(p,80,4,38,'#a8432f');P(p,80,1,38,'#c45a42')}
+  lattice(P,14,88,16,26);lattice(P,38,88,12,26);lattice(P,78,88,12,26);lattice(P,98,88,16,26);
+  lattice(P,57,88,6,28);lattice(P,65,88,6,28);
+  // 위층 난간
+  P(4,74,120,6,'#a8432f');P(4,74,120,1,'#c45a42');P(4,70,120,2,'#2e8b6a');
+  for(let i=6;i<124;i+=5){P(i,66,2,8,'#2e8b6a');P(i,66,2,1,'#f2c84b')}P(4,64,120,2,'#a8432f');
+  // 위층 (주합루)
+  P(10,44,108,20,'#f4ecd8');
+  for(const p of PL){P(p,40,4,26,'#a8432f');P(p,40,1,26,'#c45a42')}
+  for(const [lx,lw] of [[14,16],[38,12],[58,12],[78,12],[98,16]])lattice(P,lx,46,lw,16,'#f7efdc','#b07a4a','#8a4a2a');
+  // 현판
+  P(52,40,24,8,'#1f3354');P(52,40,24,1,'#f2c84b');P(52,47,24,1,'#f2c84b');for(const tx of [56,63,70])P(tx,42,3,4,'#f2c84b');
+  // 다포와 단청
+  for(let i=6;i<122;i+=7){P(i,33,5,3,'#2e8b6a');P(i+1,36,3,3,'#2f5fa8');P(i+1,33,3,1,'#f2c84b')}
+  P(4,30,120,3,'#2f5fa8');for(let i=6;i<122;i+=5)P(i,31,2,1,'#c0392b');
+  giwaRoof(P,{cx:64,y0:12,y1:31,top:34,bot:62,curve:1.8,lift:8,ridge:32,base:'#4a5463',line:'#5f6b7c',edge:'#384252',eave:'#2c3442'});
+  return outline(c);
 }
-function sprPillar(){ const c=mkCanvas(12,26),x=c.getContext('2d'),P=(a,b,w,h,col)=>{x.fillStyle=col;x.fillRect(a,b,w,h)};
-  P(2,4,8,18,'#ece6da');P(4,4,1,18,'#c9c0b0');P(7,4,1,18,'#c9c0b0');P(0,1,12,3,'#ece6da');P(0,22,12,3,'#d8cfbf');return outline(c)}
-function sprPalm(){ const c=mkCanvas(30,46),x=c.getContext('2d'),P=(a,b,w,h,col)=>{x.fillStyle=col;x.fillRect(a,b,w,h)};
-  for(let y=12;y<44;y++){P(14+Math.round(Math.sin(y/9)*2),y,3,1,y%3?'#8a6a3e':'#6b4f2a')}
-  const leaf=(dx,dy)=>{for(let i=0;i<12;i++)P(15+Math.round(dx*i),11+Math.round(dy*i+i*i*.06),3,2,i%2?'#3f8f43':'#4fa34b')};
-  leaf(1,-.3);leaf(-1,-.3);leaf(.8,.3);leaf(-.8,.3);leaf(.2,-.6);P(13,9,6,4,'#3f8f43');P(14,12,2,2,'#6b4a2f');P(17,12,2,2,'#6b4a2f');
-  return outline(c)}
-function sprEasel(){ const c=mkCanvas(16,26),x=c.getContext('2d'),P=(a,b,w,h,col)=>{x.fillStyle=col;x.fillRect(a,b,w,h)};
-  P(3,8,2,17,'#8a6236');P(11,8,2,17,'#8a6236');P(7,4,2,21,'#6b4a2f');P(1,4,14,11,'#f7f1e1');P(2,5,12,9,'#9fd3f0');P(2,10,12,4,'#5aa04a');P(9,6,3,3,'#ffd34d');P(3,8,3,2,'#ffffff');P(1,15,14,2,'#8a6236');
-  return outline(c)}
+/* ── 자기와 소품 ── */
+function sprJar(kind){
+  const big=kind==='moon', c=mkCanvas(big?26:20,big?30:26), x=c.getContext('2d'), P=mkP(x);
+  const cx=big?13:10, by=big?26:22;
+  P(cx-7,by,14,3,'#8f8a80');P(cx-7,by,14,1,'#b5b0a6'); // 받침돌
+  if(kind==='moon'){pcirc(x,13,14,10,'#f4f1e8');pcirc(x,11,12,7,'#fbf9f3');P(9,2,8,3,'#ece8dc');P(8,2,10,1,'#d9d4c6');P(4,20,18,2,'#e3ded2');return outline(c)}
+  const body=kind==='buncheong'?'#8c9a8e':'#f1eee4', sh=kind==='buncheong'?'#748277':'#dcd7ca';
+  pell(x,10,14,7,7,body);P(7,4,6,4,body);P(6,3,8,2,sh);pell(x,12,16,4,4,shade(body,.06));P(4,19,12,2,sh);
+  if(kind==='buncheong'){for(const yy of [9,12,15,18])P(4,yy,12,1,'#e9e6da');P(7,13,5,2,'#3a3f3a');P(12,13,2,1,'#3a3f3a');P(6,14,1,1,'#3a3f3a')}
+  if(kind==='cheolhwa'){for(let k=0;k<9;k++)P(5+k,10+Math.round(Math.sin(k)*2),1,1,'#7a3a1e');P(8,13,2,2,'#7a3a1e');P(11,15,2,2,'#7a3a1e');P(6,16,2,2,'#7a3a1e')}
+  if(kind==='cheonghwa'){P(4,8,12,1,'#2f5fa8');P(4,19,12,1,'#2f5fa8');for(let k=0;k<10;k++)P(5+k,13+Math.round(Math.sin(k*.9)*2),1,1,'#2f5fa8');P(9,11,2,2,'#2f5fa8')}
+  return outline(c);
+}
+function sprBamboo(seed){
+  const c=mkCanvas(26,48),x=c.getContext('2d'),P=mkP(x),r=mulberry32(seed);
+  for(const [bx,top,col] of [[6,8,'#4f8f3a'],[12,2,'#5ea345'],[18,10,'#467f34'],[9,14,'#3f7530']]){
+    for(let y=top;y<46;y++)P(bx,y,2,1,col);for(let y=top+5;y<46;y+=7)P(bx,y,2,1,'#2f5a26');
+  }
+  for(let i=0;i<34;i++){const a=2+r()*21|0,b=2+r()*30|0;P(a,b,3,1,r()<.5?'#3f7a32':'#6fb257')}
+  return outline(c);
+}
+function sprIsland(){ // 부용지 가운데 둥근 섬과 소나무
+  const c=mkCanvas(44,42),x=c.getContext('2d'),P=mkP(x);
+  pell(x,22,33,19,7,'#8f8a80');pell(x,22,32,17,6,'#5aa04a');pell(x,20,31,10,3,'#69b257');
+  P(21,18,3,14,'#6b4a2f');P(19,24,3,2,'#6b4a2f');P(24,22,4,2,'#6b4a2f');
+  pell(x,22,14,13,6,'#2e6a3c');pell(x,18,10,8,4,'#367a44');pell(x,27,17,7,3,'#367a44');pell(x,22,8,6,3,'#3f8a4c');
+  return outline(c);
+}
+function sprDesk(){ // 화원의 서안: 화선지, 벼루, 붓
+  const c=mkCanvas(26,18),x=c.getContext('2d'),P=mkP(x);
+  P(2,8,22,3,'#7a4e2c');P(2,8,22,1,'#9a6a40');P(3,11,2,6,'#6b4226');P(21,11,2,6,'#6b4226');
+  P(5,3,12,6,'#f7f2e4');P(7,5,3,2,'#6a6a70');P(9,4,3,3,'#3a3a40');P(12,6,3,1,'#9a9aa0');
+  P(18,5,5,3,'#2a2a30');P(19,6,2,1,'#4a4a55');P(16,2,1,6,'#a8743f');P(16,1,1,1,'#2a2220');
+  return outline(c);
+}
 
 /* ════════════════════════════════════════════════
    6. 마을 만들기
@@ -739,77 +849,82 @@ function place(spr, tx, ty, opt={}){
 }
 
 const PLACES = []; // 살펴볼 수 있는 곳: {x0,y0,x1,y1(타일), who, lines}
+const LOCK='🔒 전시실 안은 아직 준비 중이에요. 곧 문이 열립니다!';
 const INFO = {
-  cave:{who:'선사 동굴관',lines:[
-    '약 1만 7천 년 전, 사람들은 프랑스 라스코 동굴의 벽에 들소와 말, 사슴을 그렸어요.',
-    '흙과 숯, 광물 가루로 만든 물감을 손가락이나 짐승 털로 칠했답니다. 벽에 남은 손바닥 자국도 보이나요?',
-    '🔒 전시관은 준비 중이에요. 곧 문이 열립니다!']},
-  egypt:{who:'고대 이집트관',lines:[
-    '고대 이집트 벽화 속 사람은 얼굴과 다리는 옆모습, 눈과 어깨는 앞모습으로 그려졌어요.',
-    '이것을 \'정면성의 원리\'라고 해요. 가장 잘 알아볼 수 있는 모습을 한 몸에 모은 거예요.',
-    '🔒 전시관은 준비 중이에요. 곧 문이 열립니다!']},
-  hanok:{who:'조선 화원(畵員)',lines:[
-    '조선 시대에는 \'도화서\'라는 관청에서 그림을 그리는 화원들이 일했어요.',
-    '김홍도도 도화서 화원이었어요. 「씨름」, 「서당」 같은 풍속화로 백성들의 생활을 생생하게 그렸지요.',
-    '백성들이 집을 꾸미려고 즐겨 그린 \'민화\'도 이곳에서 만나게 될 거예요.',
-    '🔒 전시관은 준비 중이에요. 곧 문이 열립니다!']},
-  greek:{who:'그리스 신전관',lines:[
-    '고대 그리스 신전은 기둥 모양에 따라 도리아식, 이오니아식, 코린트식으로 나눠요.',
-    '아테네의 파르테논 신전은 단순하고 힘찬 도리아식 기둥으로 지어졌어요.',
-    '🔒 전시관은 준비 중이에요. 곧 문이 열립니다!']},
-  monet:{who:'모네의 연못',lines:[
-    '클로드 모네는 프랑스 지베르니에 있는 자기 집 정원 연못을 가꾸고, 그 연못의 수련을 약 250점이나 그렸어요.',
-    '시간과 날씨에 따라 달라지는 빛과 색을 그린 모네는 \'인상주의\'를 대표하는 화가예요.']},
+  early:{who:'조선 초기 전시실',lines:[
+    '조선 초기(15~16세기)에는 새 나라의 기틀을 다지며 단정하고 품위 있는 미술이 발달했어요.',
+    '벽에 걸린 긴 두루마리를 보세요. 안견의 「몽유도원도」(1447)는 안평대군이 꿈에서 본 복숭아꽃 마을, 도원을 그린 그림이에요.',
+    '공예에서는 회색 흙그릇에 흰 흙을 발라 자유롭게 꾸민 분청사기가 널리 쓰였고, 깨끗한 백자도 만들어지기 시작했어요.',
+    LOCK]},
+  middle:{who:'조선 중기 전시실',lines:[
+    '조선 중기(16세기 후반~17세기)에는 임진왜란과 병자호란을 겪은 뒤, 먹의 진하고 옅음을 살린 수묵화가 사랑받았어요.',
+    '선비들은 사군자를 즐겨 그렸어요. 이정의 대나무(묵죽), 어몽룡의 매화(묵매)가 유명하고, 김명국은 거침없는 붓질로 「달마도」를 그렸어요.',
+    '전쟁 뒤 푸른 안료가 귀해지자, 철 성분 안료로 갈색 무늬를 그린 철화백자가 많이 만들어졌어요.',
+    LOCK]},
+  late:{who:'조선 후기 전시실',lines:[
+    '조선 후기(18~19세기)에는 우리 땅과 우리 사람들의 모습을 그리는 새로운 그림이 꽃피었어요.',
+    '정선은 「인왕제색도」처럼 실제 우리 산천을 보고 그리는 진경산수화를 완성했어요. 김홍도와 신윤복은 생활 모습을 그린 풍속화로 유명해요.',
+    '백성들은 호랑이와 까치를 그린 호작도 같은 민화로 집을 꾸몄고, 공예에서는 푸른 무늬의 청화백자와 둥근 달항아리가 사랑받았어요.',
+    LOCK]},
+  kyujang:{who:'규장각 (주합루)',lines:[
+    '정조가 왕위에 오른 해(1776)에 창덕궁 후원에 세운 왕실 도서관이자 학문 연구 기관이에요.',
+    '아래층은 책을 보관한 규장각, 위층은 주합루라고 불렀어요. 정조는 이곳에서 젊은 학자들과 함께 공부하며 조선 후기 문화를 이끌었어요.',
+    '🔒 안으로는 아직 들어갈 수 없어요.']},
+  buyongji:{who:'부용지',lines:[
+    '규장각 앞 연못 부용지는 네모난 연못 가운데에 둥근 섬이 떠 있어요.',
+    '"하늘은 둥글고 땅은 네모나다(천원지방)"는 옛사람들의 생각을 담은 모양이랍니다.']},
   pagoda:{who:'삼층석탑',lines:[
     '불국사 삼층석탑(석가탑)은 통일신라 시대에 세워진 대표적인 석탑이에요.',
     '높이와 너비의 비례가 잘 맞아 단정하고 아름다운 탑으로 손꼽힌답니다.']},
   welcome:{who:'마을 안내판',lines:[
-    '★ 미술사 마을 ★\n위쪽: 선사 동굴관 · 고대 이집트관\n아래쪽: 조선 화원 · 그리스 신전관',
-    '시대를 따라 걸으며 미술의 역사를 만나 보세요!']},
-  easel:{who:'이젤',lines:['누군가 그리다 만 풍경화가 놓여 있어요.\n하늘, 해, 풀밭… 언젠가 여기서 직접 그림을 그릴 수 있을 거예요.']},
+    '★ 한국미술사 마을 ★\n위쪽: 조선 초기 전시실 · 규장각\n아래쪽: 조선 중기 전시실 · 조선 후기 전시실',
+    '시대 순서대로 초기 → 중기 → 후기 전시실을 돌아보고, 규장각도 찾아가 보세요!']},
+  desk:{who:'화원의 서안',lines:['낮은 책상 위에 화선지와 벼루, 붓이 놓여 있어요.\n누군가 먹으로 산수화를 그리다 만 것 같아요. 옆에 물감 접시도 있네요!']},
 };
+
 
 function buildVillage(){
   // 길
   fillRect('P',27,3,28,41);   // 남북 큰길
   fillRect('P',3,21,52,22);   // 동서 큰길
   fillRect('S',21,17,34,26);  // 광장
-  fillRect('P',11,12,12,20);  // 동굴관 가는 길
-  fillRect('P',43,12,44,20);  // 이집트관 가는 길
-  fillRect('P',8,37,47,38);   // 남쪽 길 (화원·신전 문이 남쪽을 봄)
-  fillRect('D',38,4,50,12);   // 이집트관 모래땅
-  fillRect('P',43,12,44,20);
-  // 모네의 연못
-  fillRect('W',33,9,39,14);fillRect('W',34,8,38,8);fillRect('W',34,15,38,15);
+  fillRect('P',11,12,12,20);  // 초기 전시실 가는 길
+  fillRect('P',8,37,47,38);   // 남쪽 길 (중기·후기 전시실 문이 남쪽을 봄)
+  fillRect('P',37,10,38,20);  // 규장각 가는 길
+  fillRect('S',37,10,48,11);  // 규장각 앞 돌마당
+  // 부용지: 네모난 연못
+  fillRect('W',39,12,48,17);
   for(let y=0;y<MH;y++)for(let x=0;x<MW;x++)if(ground[y][x]==='W')solid[y][x]=true;
   // 꽃밭
   const r=mulberry32(42);
   for(let i=0;i<70;i++){const x=2+r()*52|0,y=2+r()*40|0;if(ground[y][x]==='G')ground[y][x]='F'}
   fillRect('F',22,14,25,15);fillRect('F',30,14,33,15);fillRect('F',30,28,33,29);fillRect('F',22,28,25,29);
 
-  // 건물
-  const cave=place(sprCave(),12,10,{x:12*T,label:'선사 동굴관'});block(9,6,15,10);
-  const pyr=place(sprPyramid(),44,10,{x:44*T,label:'고대 이집트관'});block(40,5,47,10);
-  const hanok=place(sprHanok(),12,34,{x:12*T,label:'조선 화원(畵員)'});block(8,30,15,34);
-  const tem=place(sprTemple(),44,34,{x:44*T,label:'그리스 신전관'});block(40,30,47,34);
-  PLACES.push({x0:10,y0:10,x1:13,y1:12,key:'cave'},{x0:42,y0:10,x1:45,y1:12,key:'egypt'},
-              {x0:10,y0:34,x1:13,y1:36,key:'hanok'},{x0:42,y0:34,x1:45,y1:36,key:'greek'});
-  // 건물 앞길을 문까지 이어 준다
+  // 전시실
+  place(sprHallEarly(),12,10,{x:12*T,label:'조선 초기 전시실'});block(8,6,15,10);
+  place(sprHallMiddle(),12,34,{x:12*T,label:'조선 중기 전시실'});block(8,30,15,34);
+  place(sprHallLate(),44,34,{x:44*T,label:'조선 후기 전시실'});block(40,30,47,34);
+  PLACES.push({x0:10,y0:10,x1:13,y1:12,key:'early'},{x0:10,y0:34,x1:13,y1:36,key:'middle'},{x0:42,y0:34,x1:45,y1:36,key:'late'});
   fillRect('P',11,35,12,36);fillRect('P',43,35,44,36);
+  // 규장각(주합루)과 부용지
+  place(sprKyujanggak(),44,9,{x:44*T,label:'규장각 (주합루)'});block(40,3,47,9);
+  PLACES.push({x0:40,y0:9,x1:47,y1:10,key:'kyujang'},{x0:39,y0:12,x1:48,y1:17,key:'buyongji'});
+  place(sprIsland(),43,15,{x:44*T,label:'부용지'});
+  for(const [px,py] of [[36,8],[49,9],[36,15],[49,16]]){place(sprTree(px*7+py,'pine'),px,py);block(px,py,px,py)}
 
-  // 광장: 석탑, 등불, 안내판, 이젤
-  const pg=place(sprPagoda(),27,21,{x:28*T,label:'삼층석탑'});block(27,20,28,21);
+  // 시대별 소품: 자기와 나무
+  for(const [k,px,py] of [['buncheong',9,12],['buncheong',14,12],['cheolhwa',9,36],['cheolhwa',14,36],['cheonghwa',41,36],['moon',46,36]]){place(sprJar(k),px,py);block(px,py,px,py)}
+  for(const [px,py] of [[5,7],[18,7],[5,12],[18,12]]){place(sprTree(px*31+py,'peach'),px,py);block(px,py,px,py)}
+  for(const [px,py] of [[6,33],[17,32],[6,29]]){place(sprTree(px*31+py,'plum'),px,py);block(px,py,px,py)}
+  for(const [px,py] of [[4,31],[4,36],[18,36],[19,29]]){place(sprBamboo(px*5+py),px,py);block(px,py,px,py)}
+  for(const [px,py] of [[38,29],[50,30],[38,36],[50,36]]){place(sprTree(px*13+py,'pine'),px,py);block(px,py,px,py)}
+
+  // 광장: 석탑, 등불, 안내판, 화원의 서안
+  place(sprPagoda(),27,21,{x:28*T,label:'삼층석탑'});block(27,20,28,21);
   PLACES.push({x0:26,y0:19,x1:29,y1:22,key:'pagoda'});
   for(const [lx,ly] of [[21,17],[34,17],[21,26],[34,26]]){place(sprLamp(),lx,ly);block(lx,ly,lx,ly)}
   place(sprSign(),25,25);block(25,25,25,25);PLACES.push({x0:25,y0:25,x1:25,y1:25,key:'welcome'});
-  place(sprEasel(),32,19);block(32,19,32,19);PLACES.push({x0:32,y0:19,x1:32,y1:19,key:'easel'});
-  // 연못 표지판
-  place(sprSign(),36,16);block(36,16,36,16);PLACES.push({x0:33,y0:8,x1:39,y1:16,key:'monet'});
-  // 이집트 야자수, 신전 기둥 잔해
-  for(const [px,py] of [[39,5],[49,5],[41,12],[49,11]]){place(sprPalm(),px,py);block(px,py,px,py)}
-  for(const [px,py] of [[39,36],[48,36],[38,31]]){place(sprPillar(),px,py);block(px,py,px,py)}
-  // 화원 마당의 매화나무
-  for(const [px,py] of [[6,33],[17,32],[6,29]]){place(sprTree(px*31+py,'plum'),px,py);block(px,py,px,py)}
+  place(sprDesk(),32,19);block(32,19,32,19);PLACES.push({x0:32,y0:19,x1:32,y1:19,key:'desk'});
 
   // 가장자리 숲
   let seed=1;
@@ -847,14 +962,14 @@ function buildGround(){
   for(let y=0;y<MH;y++)for(let x=0;x<MW;x++)g.drawImage(makeTile(ground[y][x],x,y,at),x*T,y*T);
   // 연꽃잎
   const r=mulberry32(99);
-  for(let i=0;i<16;i++){const x=33*T+8+r()*(6*T-8)|0,y=8*T+8+r()*(7*T-8)|0;if(at(x/T|0,y/T|0)!=='W'||at((x+6)/T|0,y/T|0)!=='W')continue;
+  for(let i=0;i<16;i++){const x=39*T+8+r()*(9*T-8)|0,y=12*T+8+r()*(5*T-8)|0;if(at(x/T|0,y/T|0)!=='W'||at((x+6)/T|0,y/T|0)!=='W')continue;if(Math.abs(x-44*T)<26&&Math.abs(y-15*T)<20)continue;
     pell(g,x,y,4,2,'#3f8f43');g.fillStyle='#5aa04a';g.fillRect(x-2,y-1,3,1);g.fillStyle='#2f6e33';g.fillRect(x,y,1,2);
     if(r()<.45){g.fillStyle='#ffb3c8';g.fillRect(x-1,y-2,3,2);g.fillStyle='#fff';g.fillRect(x,y-3,1,1)}}
   // 작은 미니맵
   miniBase=mkCanvas(MW,MH);const m=miniBase.getContext('2d');
   const mc={G:'#5aa04a',F:'#62a852',P:'#c9a46a',S:'#b9b3a6',W:'#3f7fc4',D:'#e3cb8e'};
   for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){m.fillStyle=solid[y][x]&&ground[y][x]!=='W'?'#2f6e33':mc[ground[y][x]];m.fillRect(x,y,1,1)}
-  m.fillStyle='#7a4e2c';[[9,6,7,5],[40,5,8,6],[8,30,8,5],[40,30,8,5]].forEach(([a,b,w,h])=>m.fillRect(a,b,w,h));
+  m.fillStyle='#7a4e2c';[[8,6,8,5],[40,3,8,7],[8,30,8,5],[40,30,8,5]].forEach(([a,b,w,h])=>m.fillRect(a,b,w,h));
 }
 
 // 이름표 DOM
@@ -913,7 +1028,7 @@ async function startGame(){
     if(code)joinRoom(code);
     running=true;starting=false;lastT=performance.now();requestAnimationFrame(loop);
     $('#fade').style.opacity=0;
-    toast(`${esc(look.name)}님, 미술사 마을에 오신 것을 환영해요!<br><small style="color:var(--muted)">${code?code+'번 방 친구들과 함께해요 · ':''}큐레이터에게 말을 걸어 보세요</small>`,3800);
+    toast(`${esc(look.name)}님, 한국미술사 마을에 오신 것을 환영해요!<br><small style="color:var(--muted)">${code?code+'번 방 친구들과 함께해요 · ':''}큐레이터에게 말을 걸어 보세요</small>`,3800);
   },450);
 }
 function backToCreate(){
@@ -941,9 +1056,9 @@ function findTarget(){
   const [fx,fy]=facingPoint();
   if(Math.hypot(fx-npc.x,fy-(npc.y-4))<14)return {kind:'npc'};
   const tx=Math.floor(fx/T), ty=Math.floor(fy/T);
-  for(const p of PLACES)if(tx>=p.x0&&tx<=p.x1&&ty>=p.y0&&ty<=p.y1&&(p.key==='monet'||p.key==='welcome'||p.key==='easel'||p.key==='pagoda'?true:player.dir==='up'))return {kind:'place',p};
+  for(const p of PLACES)if(tx>=p.x0&&tx<=p.x1&&ty>=p.y0&&ty<=p.y1&&(['buyongji','welcome','desk','pagoda'].includes(p.key)?true:player.dir==='up'))return {kind:'place',p};
   // 연못은 물가 어디서든
-  if(at(tx,ty)==='W')return {kind:'place',p:{key:'monet'}};
+  if(at(tx,ty)==='W')return {kind:'place',p:{key:'buyongji'}};
   return null;
 }
 function interact(){
@@ -952,9 +1067,9 @@ function interact(){
   const t=findTarget();if(!t)return;
   if(t.kind==='npc'){
     npc.dir={down:'up',up:'down',left:'right',right:'left'}[player.dir];
-    openDialog('큐레이터',[`어서 와요, ${look.name}님! 여기는 시대별 미술을 만날 수 있는 '미술사 마을'이에요.`,
-      '위쪽에는 선사 동굴관과 고대 이집트관, 아래쪽에는 조선 화원과 그리스 신전관이 있어요.',
-      '전시관 문 앞이나 표지판 앞에서 Space 키를 눌러 살펴보세요. 오른쪽 위 연못도 꼭 들러 봐요!',
+    openDialog('큐레이터',[`어서 와요, ${look.name}님! 여기는 조선의 그림과 공예를 만나는 '한국미술사 마을'이에요.`,
+      '왼쪽 위 초기 전시실에서 출발해 왼쪽 아래 중기, 오른쪽 아래 후기 전시실 순서로 돌아보세요.',
+      '오른쪽 위에는 정조가 세운 규장각과 연못 부용지가 있어요. 전시실 문 앞에서 Space 키를 눌러 살펴보세요!',
       '설명을 잘 읽고 퀴즈를 맞히면 아이템을 얻어요. 모은 아이템은 가방(I 키)에서 볼 수 있어요.',
       '자, 첫 선물이에요. 화원이라면 붓이 있어야죠!']);
     setFlag('talked');
@@ -1051,8 +1166,8 @@ function update(dt){
   sendPos(false);
   // 지금 있는 구역
   const tx=player.x/T, ty=player.y/T;
-  const place = ty<17? (tx<20?'선사 동굴관 앞':tx>36?'고대 이집트관 앞':'모네의 연못 근처') : ty>27? (tx<20?'조선 화원 앞':tx>36?'그리스 신전관 앞':'마을 남쪽 길') : (tx>20&&tx<35?'마을 광장':'마을 큰길');
-  if(place!==curPlace){curPlace=place;$('#hudPlace').textContent=place;if(place.endsWith('관 앞')||place==='조선 화원 앞')setFlag('visit_'+place)}
+  const place = ty<17? (tx<20?'조선 초기 전시실 앞':tx>=35?'규장각 · 부용지':'마을 북쪽 길') : ty>27? (tx<20?'조선 중기 전시실 앞':tx>36?'조선 후기 전시실 앞':'마을 남쪽 길') : (tx>20&&tx<35?'마을 광장':'마을 큰길');
+  if(place!==curPlace){curPlace=place;$('#hudPlace').textContent=place;if(VISIT_PLACES.includes(place))setFlag('visit_'+place)}
 }
 
 /* ── 그리기 ── */
@@ -1117,50 +1232,47 @@ function createLoop(t){
    - QUESTS: 어떤 조건을 채우면 어떤 아이템을 주는지
      조건에 쓸 수 있는 기록:
        p.flags.talked         큐레이터와 이야기함
-       p.flags['read_키']     그곳 설명을 읽음 (키: cave egypt hanok greek monet pagoda welcome easel)
+       p.flags['read_키']     그곳 설명을 읽음 (키: early middle late kyujang buyongji pagoda welcome desk)
        p.flags['visit_장소']  그 장소 앞에 가 봄
        p.flags.friend         방 코드로 친구와 함께 있었음
        p.quiz.키              그곳 퀴즈를 맞힘
    ════════════════════════════════════════════════ */
 const ITEMS = {
-  brush:  {name:'화원의 붓',        desc:'조선의 화원들이 쓰던 붓이에요. 먹의 진하고 옅음(농담)으로 산과 물, 사람을 그렸어요.'},
-  palette:{name:'화가의 팔레트',    desc:'물감을 덜어 섞는 판이에요. 서양 화가들은 팔레트 위에서 유화 물감을 섞어 원하는 색을 만들었어요.'},
-  ochre:  {name:'황토 안료',        desc:'선사 시대 사람들은 황토와 숯, 광물 가루를 물감 삼아 동굴 벽에 동물을 그렸어요.'},
-  papyrus:{name:'파피루스 두루마리', desc:'고대 이집트 사람들은 파피루스 풀 줄기를 얇게 펴 붙여 종이처럼 쓰는 재료를 만들었어요.'},
-  minhwa: {name:'까치호랑이 민화',   desc:'까치와 호랑이를 함께 그린 민화예요. 좋은 소식을 바라고 나쁜 기운을 막아 달라는 마음을 담았어요.'},
-  column: {name:'도리아식 기둥 조각', desc:'장식이 적고 굵고 단단한 느낌의 도리아식 기둥이에요. 파르테논 신전이 이 양식으로 지어졌어요.'},
-  lily:   {name:'수련 한 송이',      desc:'모네가 지베르니 정원 연못에서 빛에 따라 달라지는 모습을 여러 번 그린 꽃이에요.'},
-  rubbing:{name:'석탑 탁본',        desc:'종이를 대고 먹방망이로 두드려 무늬를 그대로 떠낸 것을 탁본이라고 해요.'},
-  map:    {name:'마을 탐험 지도',    desc:'미술사 마을의 네 전시관을 모두 찾아간 탐험가에게 주는 지도예요.'},
-  knot:   {name:'우정 매듭',        desc:'전통 매듭 공예로 엮은 매듭이에요. 함께 모험한 친구를 기억하게 해 줘요.'},
-  medal:  {name:'미술사 박사 메달',  desc:'마을의 모든 퀴즈를 맞힌 사람만 받을 수 있는 메달이에요. 정말 대단해요!'},
+  brush:    {name:'화원의 붓',       desc:'조선의 화원들이 쓰던 붓이에요. 먹의 진하고 옅음(농담)으로 산과 물, 사람을 그렸어요.'},
+  palette:  {name:'화가의 팔레트',   desc:'물감을 덜어 섞는 접시예요. 화원들은 광물과 식물에서 얻은 안료를 아교에 개어 채색했어요.'},
+  buncheong:{name:'분청사기 항아리', desc:'회색 흙그릇에 흰 흙을 바르고 긁거나 그려서 꾸민 그릇이에요. 조선 초기에 널리 쓰였어요.'},
+  mukjuk:   {name:'묵죽 족자',       desc:'먹으로 그린 대나무 족자예요. 곧게 뻗은 대나무는 선비의 굳은 절개를 뜻했어요.'},
+  moonjar:  {name:'달항아리',        desc:'보름달처럼 둥글고 흰 큰 백자 항아리예요. 조선 후기 백자의 넉넉한 아름다움을 보여 줘요.'},
+  book:     {name:'규장각 책',       desc:'규장각에서 펴내고 보관한 책이에요. 정조와 학자들은 이곳에서 많은 책을 펴냈어요.'},
+  rubbing:  {name:'석탑 탁본',       desc:'종이를 대고 먹방망이로 두드려 무늬를 그대로 떠낸 것을 탁본이라고 해요.'},
+  map:      {name:'마을 탐험 지도',   desc:'세 전시실과 규장각을 모두 찾아간 탐험가에게 주는 지도예요.'},
+  knot:     {name:'우정 매듭',       desc:'전통 매듭 공예로 엮은 매듭이에요. 함께 모험한 친구를 기억하게 해 줘요.'},
+  medal:    {name:'미술사 박사 메달', desc:'마을의 모든 퀴즈를 맞힌 사람만 받을 수 있는 메달이에요. 정말 대단해요!'},
 };
 const QUIZ = {
-  cave:  {q:'라스코 동굴벽화에 주로 그려진 것은 무엇일까요?', choices:['들소, 말 같은 동물','왕의 얼굴','꽃과 나비'], answer:0,
-          explain:'선사 시대 사람들은 사냥하던 동물을 동굴 벽에 그렸어요.'},
-  egypt: {q:'고대 이집트 벽화 속 사람의 눈과 어깨는 어떤 모습으로 그렸을까요?', choices:['앞모습','옆모습','뒷모습'], answer:0,
-          explain:'얼굴과 다리는 옆모습, 눈과 어깨는 앞모습! 이것이 정면성의 원리예요.'},
-  hanok: {q:'조선 시대에 그림 그리는 일을 맡았던 관청의 이름은?', choices:['도화서','집현전','규장각'], answer:0,
-          explain:'도화서의 화원들이 궁중의 그림을 그렸어요. 김홍도도 도화서 화원이었어요.'},
-  greek: {q:'파르테논 신전의 기둥은 어떤 양식일까요?', choices:['도리아식','이오니아식','코린트식'], answer:0,
-          explain:'파르테논 신전은 단순하고 힘찬 도리아식 기둥으로 지어졌어요.'},
-  monet: {q:'모네처럼 빛에 따라 달라지는 색을 그린 미술 흐름을 무엇이라고 할까요?', choices:['인상주의','입체주의','초현실주의'], answer:0,
-          explain:'모네의 그림 「인상, 해돋이」에서 \'인상주의\'라는 이름이 나왔어요.'},
-  pagoda:{q:'불국사 삼층석탑(석가탑)은 어느 시대에 세워졌을까요?', choices:['통일신라','고려','조선'], answer:0,
-          explain:'통일신라 시대에 세워진, 비례가 아름다운 석탑이에요.'},
+  early:  {q:'안견이 안평대군의 꿈 이야기를 듣고 그린 그림은 무엇일까요?', choices:['몽유도원도','인왕제색도','세한도'], answer:0,
+           explain:'「몽유도원도」는 꿈에서 본 복숭아꽃 이상향을 그린 조선 초기의 산수화예요.'},
+  middle: {q:'조선 중기에 철 성분 안료로 갈색 무늬를 그린 백자는 무엇일까요?', choices:['철화백자','청화백자','분청사기'], answer:0,
+           explain:'푸른 안료가 귀해지자 갈색을 내는 철화 안료로 무늬를 그렸어요.'},
+  late:   {q:'정선이 우리나라의 실제 경치를 보고 그린 그림을 무엇이라고 할까요?', choices:['진경산수화','묵죽도','달마도'], answer:0,
+           explain:'「인왕제색도」, 「금강전도」가 대표적인 진경산수화예요.'},
+  kyujang:{q:'창덕궁 후원에 규장각을 세운 조선의 왕은 누구일까요?', choices:['정조','세종','태조'], answer:0,
+           explain:'정조는 즉위한 해에 규장각을 세워 학문과 문화를 꽃피웠어요.'},
+  pagoda: {q:'불국사 삼층석탑(석가탑)은 어느 시대에 세워졌을까요?', choices:['통일신라','고려','조선'], answer:0,
+           explain:'통일신라 시대에 세워진, 비례가 아름다운 석탑이에요.'},
 };
+const VISIT_PLACES=['조선 초기 전시실 앞','조선 중기 전시실 앞','조선 후기 전시실 앞','규장각 · 부용지'];
 const QUESTS = [
-  {item:'brush',   how:'큐레이터와 이야기하기',            cond:p=>p.flags.talked},
-  {item:'palette', how:'광장의 이젤 살펴보기',             cond:p=>p.flags.read_easel},
-  {item:'ochre',   how:'선사 동굴관 퀴즈 맞히기',          cond:p=>p.quiz.cave},
-  {item:'papyrus', how:'고대 이집트관 퀴즈 맞히기',        cond:p=>p.quiz.egypt},
-  {item:'minhwa',  how:'조선 화원 퀴즈 맞히기',            cond:p=>p.quiz.hanok},
-  {item:'column',  how:'그리스 신전관 퀴즈 맞히기',        cond:p=>p.quiz.greek},
-  {item:'lily',    how:'모네의 연못 퀴즈 맞히기',          cond:p=>p.quiz.monet},
-  {item:'rubbing', how:'삼층석탑 퀴즈 맞히기',             cond:p=>p.quiz.pagoda},
-  {item:'map',     how:'네 전시관 앞에 모두 가 보기',       cond:p=>['선사 동굴관 앞','고대 이집트관 앞','조선 화원 앞','그리스 신전관 앞'].every(k=>p.flags['visit_'+k])},
-  {item:'knot',    how:'방 코드로 들어가 친구와 함께 있기',  cond:p=>p.flags.friend},
-  {item:'medal',   how:'마을의 퀴즈 6개 모두 맞히기',       cond:p=>Object.keys(QUIZ).every(k=>p.quiz[k])},
+  {item:'brush',    how:'큐레이터와 이야기하기',            cond:p=>p.flags.talked},
+  {item:'palette',  how:'광장의 화원 서안 살펴보기',        cond:p=>p.flags.read_desk},
+  {item:'buncheong',how:'조선 초기 전시실 퀴즈 맞히기',     cond:p=>p.quiz.early},
+  {item:'mukjuk',   how:'조선 중기 전시실 퀴즈 맞히기',     cond:p=>p.quiz.middle},
+  {item:'moonjar',  how:'조선 후기 전시실 퀴즈 맞히기',     cond:p=>p.quiz.late},
+  {item:'book',     how:'규장각 퀴즈 맞히기',              cond:p=>p.quiz.kyujang},
+  {item:'rubbing',  how:'삼층석탑 퀴즈 맞히기',             cond:p=>p.quiz.pagoda},
+  {item:'map',      how:'세 전시실과 규장각에 모두 가 보기',  cond:p=>VISIT_PLACES.every(k=>p.flags['visit_'+k])},
+  {item:'knot',     how:'방 코드로 들어가 친구와 함께 있기',  cond:p=>p.flags.friend},
+  {item:'medal',    how:'마을의 퀴즈 5개 모두 맞히기',       cond:p=>Object.keys(QUIZ).every(k=>p.quiz[k])},
 ];
 
 // 몸에 착용할 수 있는 아이템: hand(손에 들기, 하나만) / neck(목에 걸기)
@@ -1172,12 +1284,10 @@ const ICON_DRAW = {
   brush:(P)=>{for(let i=0;i<9;i++)P(12-i,2+i,2,1,i%3?'#a8743f':'#8a5a2c');P(3,11,2,2,'#e8e2d0');P(2,12,2,2,'#2a2220');P(1,14,2,1,'#2a2220');P(11,2,2,1,'#c0392b')},
   palette:(P)=>{pell(ICTX,8,8,7,5,'#d9b27a');pell(ICTX,8,8,6,4,'#e6c48e');P(4,11,3,2,'rgba(0,0,0,0)');ICTX.clearRect(4,10,3,3);
     P(4,6,2,2,'#c0392b');P(7,5,2,2,'#f0c419');P(10,6,2,2,'#2f6fd0');P(11,9,2,2,'#3f9f5a');P(8,10,2,2,'#ffffff')},
-  ochre:(P)=>{pell(ICTX,8,10,6,4,'#8a5a32');P(2,9,13,2,'#a8743f');pell(ICTX,8,8,5,2,'#d9a23a');P(6,6,4,2,'#e8b84a');P(5,13,6,1,'#6b4226')},
-  papyrus:(P)=>{P(3,3,10,10,'#ead7a4');P(2,2,2,12,'#c9a46a');P(12,2,2,12,'#c9a46a');for(let y=5;y<12;y+=2)P(5,y,6,1,'#8a6a3a');P(6,4,1,1,'#2f6fd0');P(9,4,1,1,'#c0392b')},
-  minhwa:(P)=>{P(1,1,14,14,'#7a4e2c');P(2,2,12,12,'#f3e6c4');P(4,8,7,4,'#e08a2a');P(5,8,1,4,'#2a2220');P(8,8,1,4,'#2a2220');P(10,7,3,3,'#e08a2a');P(11,8,1,1,'#2a2220');
-    P(4,3,3,2,'#24304a');P(7,4,1,1,'#ffffff');P(3,4,1,1,'#24304a');P(9,3,4,1,'#3f8f43')},
-  column:(P)=>{P(3,1,10,2,'#ece6da');P(4,3,8,10,'#ece6da');P(6,3,1,10,'#c9c0b0');P(9,3,1,10,'#c9c0b0');P(3,13,10,2,'#d8cfbf');P(11,9,2,1,'#c9c0b0')},
-  lily:(P)=>{pell(ICTX,8,11,7,3,'#3f8f43');P(8,11,1,3,'#2f6e33');P(5,6,2,4,'#ffb3c8');P(9,6,2,4,'#ffb3c8');P(7,4,2,6,'#ff8fb1');P(4,8,8,2,'#ffc7d6');P(7,8,2,1,'#ffd34d')},
+  buncheong:(P)=>{pell(ICTX,8,9,6,5,'#8c9a8e');P(5,3,6,3,'#8c9a8e');P(4,2,8,2,'#748277');for(const y of [7,10,13])P(3,y,10,1,'#e9e6da');P(6,9,4,2,'#3a3f3a');P(10,9,2,1,'#3a3f3a')},
+  mukjuk:(P)=>{P(3,1,10,1,'#5a3a1e');P(4,2,8,12,'#b9a77a');P(5,3,6,10,'#f4efe2');P(7,3,1,10,'#1f1f22');P(9,4,1,9,'#6a6a70');P(8,5,2,1,'#1f1f22');P(6,8,1,1,'#1f1f22');P(8,10,2,1,'#1f1f22');P(3,14,10,1,'#5a3a1e')},
+  moonjar:(P)=>{pcirc(ICTX,8,9,6,'#f4f1e8');pcirc(ICTX,7,8,4,'#fbf9f3');P(6,1,4,2,'#ece8dc');P(5,1,6,1,'#d9d4c6');P(4,13,8,1,'#d9d4c6')},
+  book:(P)=>{P(3,2,10,12,'#2f4b6f');P(3,2,10,1,'#46658f');P(9,3,2,7,'#f3ecd8');P(9,4,2,1,'#2a2220');P(9,6,2,1,'#2a2220');for(const y of [3,6,9,12])P(4,y,1,1,'#e8e2d0');P(3,14,10,1,'#1f3354')},
   rubbing:(P)=>{P(2,1,12,14,'#f7f1e1');P(2,1,12,1,'#d8cfbf');P(7,3,2,2,'#4a4a55');P(5,5,6,1,'#4a4a55');P(6,6,4,2,'#4a4a55');P(4,8,8,1,'#4a4a55');P(5,9,6,2,'#4a4a55');P(3,11,10,1,'#4a4a55');P(4,12,8,2,'#4a4a55')},
   map:(P)=>{P(1,3,5,11,'#ead7a4');P(6,2,5,11,'#f3e6c4');P(11,3,4,11,'#ead7a4');P(3,6,9,1,'#c0392b');P(8,6,1,5,'#c0392b');P(8,10,4,1,'#c0392b');P(12,9,2,2,'#c0392b');P(3,11,2,2,'#3f7fc4');P(9,3,2,2,'#3f8f43')},
   knot:(P)=>{P(6,1,4,3,'#c0392b');P(4,4,8,4,'#d8423a');P(3,5,2,2,'#c0392b');P(11,5,2,2,'#c0392b');P(7,4,2,4,'#a32b20');P(6,8,4,2,'#c0392b');
