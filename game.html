@@ -1353,7 +1353,7 @@ const INFO = {
   dowon_gate:{who:'몽유도원 가는 길',lines:[
     '1447년, 안평대군은 꿈에서 복숭아꽃이 핀 신비로운 마을(도원)을 거닐었어요. 안견은 그 이야기를 듣고 사흘 만에 「몽유도원도」를 그렸어요.',
     '그림은 왼쪽 아래 현실 세계에서 시작해 오른쪽 위 도원으로 이어져요. 이 길도 기이한 바위산 사이를 지나 도원으로 이어진답니다.']},
-  dowon:{who:'도원',lines:['여기가 꿈속의 도원이에요! 복숭아꽃이 가득하고, 사람 하나 없이 고요해요.','안평대군이 꿈에서 본 이상향, 「몽유도원도」의 오른쪽 끝 장면이에요. 복숭아 하나를 챙겨 가요!']},
+  dowon:{who:'도원',lines:['여기가 꿈속의 도원이에요! 복숭아꽃이 가득하고, 대나무 숲과 초가집이 있지만 사람 하나 없이 고요해요.','안평대군이 꿈에서 본 이상향, 「몽유도원도」의 오른쪽 위 끝 장면이에요.']},
   gosa:{who:'고사관수도',lines:[
     '강희안(1417~1464)의 「고사관수도」예요. 덩굴이 늘어진 절벽 아래, 선비가 바위에 엎드리듯 기대어 물을 바라보고 있어요.',
     '물을 바라보며 마음을 맑게 하는 선비의 모습에서 자연과 하나가 되려는 마음을 느낄 수 있어요.']},
@@ -1430,6 +1430,29 @@ function buildEarly(m){
     if(near)continue;place(sprDreamRock(i*7+1),x,y);block(x-1,y,x+1,y);cnt++}
   for(const [px,py] of [[52,6],[55,5],[59,6],[60,9],[52,11],[58,11],[61,7.5]]){place(treeSpr('peach',px*3+py),px,py|0);block(px,py|0,px,py|0)}
   PLACES.push({x0:54,y0:7,x1:58,y1:10,key:'dowon',any:true});
+  // 「몽유도원도」 이야기 속 사람들과 안견
+  const free=(x,y)=>{for(let r=0;r<4;r++)for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){const tx=Math.round(x+dx),ty=Math.round(y+dy);
+    if(tx>0&&ty>0&&tx<MW&&ty<MH&&!solid[ty][tx]&&ground[ty][tx]!=='W'&&!solid[ty-1]?.[tx])return [tx,ty]}return [Math.round(x),Math.round(y)]};
+  const dreamer=(x,y,o)=>{const [tx,ty]=free(x,y);return mkNPC({x:tx*T+8,y:ty*T+12,...o})};
+  const [ax,ay]=free(35.5,24);
+  mkNPC({x:ax*T+8,y:ay*T+6,seated:true,dir:'down',name:'안견',look:LK({outfit:'dopo',top:'#ece6d6',hat:'gat',hairColor:'#4b3122'}),
+    chat:['대군의 꿈 이야기를 그림으로 옮겨야지…','기이한 바위산은 구름처럼 피어오르게…'],talk:talkAngyeon});
+  place(sprDesk(),ax,ay,{x:ax*T+8,y:ay*T+15});block(ax,ay,ax,ay);
+  dreamer(31,19.5,{dir:'right',name:'산관야복의 길잡이',look:LK({top:'#a8906a',bottom:'#8a7a5a',hairColor:'#c9c3bb'}),
+    chat:['이 길을 따라 북쪽 골짜기로 들어가면 도원이오.','길이 험하니 조심하시오.'],
+    talk:()=>openDialog('산관야복의 길잡이',['나는 대군의 꿈에 나타난, 산사람 옷차림(산관야복)을 한 사람이오.','"이 길을 따라 북쪽으로 휘어져 골짜기에 들어가면 도원이오." 대군께 이렇게 길을 알려 드렸지.','기이한 바위 사이로 난 길을 따라가 보시오.'])});
+  dreamer(38,13.6,{dir:'right',name:'안평대군',look:LK({outfit:'dopo',top:'#d8c8e8',hat:'gat'}),
+    chat:['인수, 저 바위산을 보게. 참으로 기이하구나!','길잡이가 말한 골짜기가 저기인가 보오.'],
+    talk:()=>openDialog('안평대군',['나는 세종대왕의 셋째 아들, 안평대군이오. 글씨와 그림을 무척 사랑하지.','꿈속에서 인수(박팽년)와 함께 이 바위산 사이를 말 타고 지났다오. 그 끝에 복숭아꽃 핀 도원이 있었지!','꿈 이야기를 안견에게 들려주었더니, 사흘 만에 그림으로 그려 냈다오.'])});
+  dreamer(40,13.4,{dir:'left',name:'박팽년',look:LK({outfit:'dopo',top:'#dfe8f0',hat:'gat'}),
+    chat:['대군, 길이 몹시 험하옵니다.','이런 곳에 마을이 있을까요?'],
+    talk:()=>openDialog('박팽년',['박팽년이오. 대군께서는 나를 자(字)인 \'인수\'라고 부르시지.','꿈속에서 대군을 모시고 함께 도원으로 가는 길이라오.'])});
+  dreamer(48.5,10.6,{dir:'right',name:'최항',look:LK({outfit:'dopo',top:'#e8e0c8',hat:'gat'}),
+    chat:['우리도 뒤따라 왔소!','복숭아꽃 향기가 여기까지 나는구려.'],
+    talk:()=>openDialog('최항',['최항이오. 대군의 꿈속에서 우리도 뒤따라 도원에 이르렀지.','저 앞 복숭아꽃 핀 곳이 바로 도원이오.'])});
+  dreamer(50.5,10.2,{dir:'left',name:'신숙주',look:LK({outfit:'dopo',top:'#c9d6e0',hat:'gat'}),
+    chat:['신발을 고쳐 신고 함께 갑시다.','사람도 닭도 개도 없이 고요하구려.'],
+    talk:()=>openDialog('신숙주',['신숙주요. 도원에는 대나무 숲과 초가집이 있었지만, 사람도 닭과 개도 없이 고요했다오.','꿈에서 깬 대군께서 그 고요한 이상향을 무척 그리워하셨지.'])});
   // 고사관수도
   place(sprCliff(),44,22,{x:44*T,label:'고사관수도'});block(42,20,45,22);
   place(sprFlatRock(),41,24,{x:41*T+8});block(41,24,41,24);
@@ -1852,6 +1875,17 @@ function quizTalk(who,lines,key,doneLines,onEnd){
   if(!prog.quiz[key])L.push({...QUIZ[key],key});else L.push(...(doneLines||['이미 퀴즈를 맞혔어요! 가방에서 받은 아이템을 확인해 보세요.']));
   openDialog(who,L,onEnd);
 }
+function talkAngyeon(n){
+  quizTalk('안견',['나는 도화서 화원 안견이오. 세종대왕의 셋째 아들 안평대군께서 아끼던 화가라오.',
+    '1447년 4월 20일 밤, 대군께서 꿈을 꾸셨소. 박팽년과 함께 우뚝 솟은 산 아래를 거닐고 있었는데…',
+    '산사람 옷차림(산관야복)을 한 사람이 나타나 "이 길을 따라 북쪽 골짜기로 들어가면 도원이오" 하고 길을 알려 주었지.',
+    '말을 타고 험한 바위 사이를 지나 골짜기에 들어서니, 복숭아꽃이 가득 핀 마을이 나타났소. 대나무 숲과 초가집이 있었지만 사람도, 닭과 개도 없이 고요했다오.',
+    '뒤따라 온 최항, 신숙주와 함께 도원을 거닐다가 꿈에서 깨셨다오.',
+    '대군의 이야기를 듣고 나는 사흘 만에 이 그림을 그렸소. 왼쪽 아래 현실 세계에서 시작해 오른쪽 위 도원으로 이야기가 흐르도록 했지. 보통 두루마리와는 반대 방향이라오.',
+    '그림 옆에는 대군과 당대 학자들이 쓴 글(찬문)이 함께 붙어 있소. 지금 이 그림은 일본 덴리대학 도서관에 있다오.',
+    '그림에는 사람이 그려져 있지 않소. 이 길 위의 사람들은 대군의 꿈 이야기 속 인물들이라오. 말을 걸어 보시오!',
+    '자, 내 이야기를 잘 들었는지 하나 물어보겠소.'],'angyeon',['도원의 복숭아는 잘 챙겼소? 길 끝의 도원도 꼭 가 보시오.']);
+}
 function talkCurator(n){
   n.dir={down:'up',up:'down',left:'right',right:'left'}[player.dir];
   openDialog('큐레이터',[`어서 와요, ${look.name}님! 지금 우리는 조선 초기의 한양에 와 있어요.`,
@@ -2187,6 +2221,8 @@ const ITEMS = {
 const QUIZ = {
   early:  {q:'안견이 안평대군의 꿈 이야기를 듣고 그린 그림은 무엇일까요?', choices:['몽유도원도','인왕제색도','세한도'], answer:0,
            explain:'「몽유도원도」는 꿈에서 본 복숭아꽃 이상향을 그린 조선 초기의 산수화예요.'},
+  angyeon:{q:'안견은 안평대군의 꿈 이야기를 듣고 「몽유도원도」를 며칠 만에 그렸을까요?', choices:['사흘(3일)','한 달','일 년'], answer:0,
+           explain:'안견은 사흘 만에 그림을 완성했어요. 대군이 쓴 글에 그렇게 적혀 있지요.'},
   wongaksa:{q:'원각사지 십층석탑은 어떤 돌로 만들었을까요?', choices:['대리석','화강암','벽돌'], answer:0, explain:'흰 대리석이라 섬세한 부조를 새길 수 있었어요.'},
   buncheong_shop:{q:'고려 말, 청자 대신 분청사기가 생겨난 까닭으로 알맞은 것은?', choices:['왜구의 침입으로 바닷가 청자 가마가 무너지고 도공들이 흩어져서','중국에서 분청사기를 많이 들여와서','임금이 청자를 쓰지 못하게 해서'], answer:0,
            explain:'흩어진 도공들이 지방의 흙으로 그릇을 빚고 흰 흙을 발라 꾸미면서 분청사기가 생겨났어요.'},
@@ -2223,7 +2259,7 @@ const QUESTS = [
   {item:'palette',  how:'광장의 화원 서안 살펴보기',          cond:p=>p.flags.read_desk},
   {item:'buncheong',how:'조선 초기 전시실 퀴즈 맞히기',       cond:p=>p.quiz.early},
   {item:'gwiyal',   how:'분청사기 가마의 사기장 퀴즈 맞히기',  cond:p=>p.quiz.buncheong_shop},
-  {item:'peach',    how:'몽유도원 길 끝의 도원 찾아가기',     cond:p=>p.flags.read_dowon},
+  {item:'peach',    how:'안견에게 「몽유도원도」 이야기 듣고 퀴즈 맞히기', cond:p=>p.quiz.angyeon},
   {item:'fan',      how:'「고사관수도」 퀴즈 맞히기',          cond:p=>p.quiz.gosa},
   {item:'rubbing',  how:'원각사지 십층석탑 퀴즈 맞히기',      cond:p=>p.quiz.wongaksa},
   {item:'hammer',   how:'광장의 짓다 만 탑을 완성하기',       cond:p=>!!p.tower},
