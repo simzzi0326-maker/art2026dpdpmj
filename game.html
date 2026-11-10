@@ -92,6 +92,8 @@ button{font:inherit;color:inherit;cursor:pointer}
   font-size:22px;color:#46598a;position:relative;max-width:100%}
 .slot img{width:75%;height:75%;image-rendering:pixelated}
 .slot.on{outline-color:var(--gold)}
+.slot.worn::before{content:'착용';position:absolute;left:-4px;bottom:-6px;font-size:9px;background:#2f6fd0;color:#fff;padding:1px 3px}
+.equipBtn{margin-top:8px}
 .slot.new::after{content:'NEW';position:absolute;right:-4px;top:-8px;font-size:9px;background:#c9483a;color:#fff;padding:1px 3px}
 #bagInfo{background:#101830;border:2px solid #0a0f1b;padding:10px 12px;min-height:84px;font-size:13px;line-height:1.7}
 #bagInfo b{color:var(--gold);font-size:15px;font-weight:400;display:block}
@@ -418,6 +420,34 @@ function drawChar(ctx, L, dir, frame){
     const fl=['#ff8fb1','#ffd34d','#ffffff','#ff8fb1','#c99cff'];
     P(5,4,10,1,'#4c9a3c');
     [5,7,9,11,13].forEach((x,i)=>{P(x,3,2,2,fl[i]);P(x+1,3,1,1,shade(fl[i],.4))});
+  }
+  /* ---------- 장비: 목걸이(메달), 손에 든 물건 ---------- */
+  if(L.neck==='medal'){
+    const rb='#2f4b8f', gd='#e8b83a', gl='#f6d36a';
+    if(dir==='down'){P(8,15,1,1,rb);P(11,15,1,1,rb);P(8,16,1,1,rb);P(11,16,1,1,rb);P(9,17,2,2,gd);P(9,17,1,1,gl)}
+    else if(dir==='up'){P(7,15,6,1,rb)}
+    else{P(8,15,1,1,rb);P(7,16,1,1,rb);P(6,17,2,2,gd);P(6,17,1,1,gl)}
+  }
+  if(L.hand==='brush'||L.hand==='palette'){
+    // 손 위치: 앞은 화면 왼쪽 손, 뒤는 화면 오른쪽 손, 옆은 보이는 손
+    let hx,hy,side;
+    if(dir==='down'){hx=4;hy=20+(f2?1:0);side=-1}
+    else if(dir==='up'){hx=14;hy=20+(f1?1:0);side=1}
+    else{hx=frame===0?9:f1?7:11;hy=20;side=-1}
+    if(L.hand==='brush'){
+      const hd='#c98a4a', hd2='#8a5a2c', fe='#f1ead8', tip='#2a2220';
+      if(dir==='down'||dir==='up'){ // 몸 바깥쪽으로 비스듬히 치켜든 붓
+        const X=v=>side<0?v:SW-1-v;
+        P(X(3),hy-1,1,1,hd);P(X(2),hy-2,1,2,hd);P(X(1),hy-4,1,2,hd2);P(X(1),hy-5,1,1,fe);P(X(1),hy-7,1,2,tip);P(X(3),hy+1,1,1,'#c0392b');
+      }else{ // 옆모습: 앞으로 내민 붓
+        P(hx-1,hy-1,1,1,hd);P(hx-2,hy-2,1,1,hd);P(hx-3,hy-3,1,1,hd2);P(hx-4,hy-4,1,1,fe);P(Math.max(1,hx-5),hy-5,1,1,tip);P(Math.max(1,hx-5),hy-6,1,1,tip);
+      }
+    }else{
+      const px=side<0?hx-3:hx+1;
+      P(px,hy-1,5,3,'#d9b27a');P(px,hy+1,5,1,'#b8904f');
+      P(px+1,hy-1,1,1,'#c0392b');P(px+3,hy-1,1,1,'#2f6fd0');P(px+2,hy,1,1,'#f0c419');P(px+4,hy,1,1,'#3f9f5a');
+    }
+    P(hx,hy,2,1,sk); // 물건을 쥔 손
   }
 }
 
@@ -876,7 +906,7 @@ async function startGame(){
     const hf=$('#hudFace').getContext('2d');hf.clearRect(0,0,SW,SH);hf.drawImage(player.sheet.down[0],0,0);
     $('#hudName').textContent=look.name;
     $('#hudRoom').textContent='';
-    prog=loadProg(look.name);bagOpen=false;$('#bag').style.display='none';updBagBtn();
+    prog=loadProg(look.name);bagOpen=false;$('#bag').style.display='none';updBagBtn();applyGear();
     // 광장 안 빈자리에서 출발 (반 친구들이 한 칸에 겹치지 않게)
     for(let i=0;i<40;i++){const x=(22+Math.random()*12)*T, y=(23+Math.random()*3)*T+8;if(!blockedAt(x,y)){player.x=x;player.y=y;break}}
     player.dir='down';
@@ -1133,6 +1163,10 @@ const QUESTS = [
   {item:'medal',   how:'마을의 퀴즈 6개 모두 맞히기',       cond:p=>Object.keys(QUIZ).every(k=>p.quiz[k])},
 ];
 
+// 몸에 착용할 수 있는 아이템: hand(손에 들기, 하나만) / neck(목에 걸기)
+const EQUIP = {brush:'hand', palette:'hand', medal:'neck'};
+const EQUIP_VERB = {hand:['손에 들기','내려놓기'], neck:['목에 걸기','벗기']};
+
 /* ── 아이템 그림 (16×16 도트) ── */
 const ICON_DRAW = {
   brush:(P)=>{for(let i=0;i<9;i++)P(12-i,2+i,2,1,i%3?'#a8743f':'#8a5a2c');P(3,11,2,2,'#e8e2d0');P(2,12,2,2,'#2a2220');P(1,14,2,1,'#2a2220');P(11,2,2,1,'#c0392b')},
@@ -1159,11 +1193,26 @@ function itemIcon(id){
 }
 
 /* ── 진행 상황 (이 기기에 이름별로 저장) ── */
-let prog={items:{},flags:{},quiz:{},seen:{}};
+let prog={items:{},flags:{},quiz:{},seen:{},equip:{}};
+function gearLook(){ // 지금 몸에 착용한 것까지 합친 외형
+  const e=prog.equip||{};
+  return {...look, hand:(e.hand&&prog.items[e.hand])?e.hand:'none', neck:(e.neck&&prog.items[e.neck])?e.neck:'none'};
+}
+function applyGear(){
+  player.sheet=buildSheet(gearLook());
+  const hf=$('#hudFace').getContext('2d');hf.clearRect(0,0,SW,SH);hf.drawImage(player.sheet.down[0],0,0);
+  if(net.ch&&net.ok){try{net.ch.track({name:look.name,look:lookToSend()})}catch(e){}}
+}
+function toggleEquip(id){
+  const slot=EQUIP[id];if(!slot||!prog.items[id])return;
+  prog.equip=prog.equip||{};
+  prog.equip[slot]=prog.equip[slot]===id?null:id;
+  saveProg();applyGear();renderBag();
+}
 function loadProg(name){
   try{const s=JSON.parse(localStorage.getItem('ahq-prog-'+name)||'null');
-    if(s&&typeof s==='object')return {items:s.items||{},flags:s.flags||{},quiz:s.quiz||{},seen:s.seen||{}}}catch(e){}
-  return {items:{},flags:{},quiz:{},seen:{}};
+    if(s&&typeof s==='object')return {items:s.items||{},flags:s.flags||{},quiz:s.quiz||{},seen:s.seen||{},equip:s.equip||{}}}catch(e){}
+  return {items:{},flags:{},quiz:{},seen:{},equip:{}};
 }
 function saveProg(){try{localStorage.setItem('ahq-prog-'+look.name,JSON.stringify(prog))}catch(e){}}
 function setFlag(f){if(prog.flags[f])return;prog.flags[f]=true;saveProg();evalQuests()}
@@ -1192,7 +1241,8 @@ function renderBag(){
   for(const q of QUESTS){
     const it=ITEMS[q.item];if(!it)continue;
     const has=!!prog.items[q.item];
-    const b=document.createElement('button');b.className='slot'+(bagSel===q.item?' on':'')+(has&&!prog.seen[q.item]?' new':'');
+    const worn=has&&EQUIP[q.item]&&(prog.equip||{})[EQUIP[q.item]]===q.item;
+    const b=document.createElement('button');b.className='slot'+(bagSel===q.item?' on':'')+(has&&!prog.seen[q.item]?' new':'')+(worn?' worn':'');
     b.setAttribute('aria-label',has?it.name:'아직 얻지 못한 아이템');
     if(has){const im=document.createElement('img');im.src=itemIcon(q.item);im.alt='';b.append(im)}else b.textContent='?';
     b.onclick=()=>{bagSel=q.item;renderBag()};
@@ -1203,6 +1253,12 @@ function renderBag(){
   const q=QUESTS.find(x=>x.item===bagSel), it=ITEMS[bagSel], has=!!prog.items[bagSel];
   info.innerHTML=has?`<b>${esc(it.name)}</b>${esc(it.desc)}<div class="how">얻은 방법: ${esc(q.how)}</div>`
                     :`<b>???</b>아직 얻지 못한 아이템이에요.<div class="how">얻는 방법: ${esc(q.how)}</div>`;
+  const slot=EQUIP[bagSel];
+  if(has&&slot){
+    const on=(prog.equip||{})[slot]===bagSel;
+    const b=document.createElement('button');b.className='pbtn small equipBtn';b.textContent=EQUIP_VERB[slot][on?1:0];
+    b.onclick=()=>toggleEquip(bagSel);info.append(b);
+  }
 }
 $('#bagBtn').onclick=()=>toggleBag();
 $('#bagClose').onclick=()=>toggleBag(false);
@@ -1224,10 +1280,12 @@ async function roomExists(code){
 function cleanLook(l){
   const o={};l=l&&typeof l==='object'?l:{};
   for(const [k,opt] of Object.entries(OPT))o[k]=opt.items.some(i=>i[0]===l[k])?l[k]:DEFAULT_LOOK[k];
+  o.hand=['brush','palette'].includes(l.hand)?l.hand:'none';
+  o.neck=l.neck==='medal'?'medal':'none';
   return o;
 }
 function cleanName(n){return (String(n||'').trim().slice(0,8))||'친구'}
-function lookToSend(){const o={};for(const k of Object.keys(OPT))o[k]=look[k];return o}
+function lookToSend(){const o={};const g=gearLook();for(const k of Object.keys(OPT))o[k]=look[k];o.hand=g.hand;o.neck=g.neck;return o}
 
 function joinRoom(code){
   leaveRoom();net.room=code;net.ok=false;updRoomHud();
