@@ -634,19 +634,48 @@ function sprLamp(){
   P(5,10,2,18,'#3b3b44');P(3,27,6,2,'#3b3b44');P(2,2,8,8,'#c0392b');P(3,3,6,6,'#f2a65a');P(4,4,2,4,'#ffe2a0');P(2,1,8,1,'#2a2a30');P(2,10,8,1,'#2a2a30');
   return outline(c);
 }
-function sprPagoda(){ // 삼층석탑
-  const c=mkCanvas(40,64), x=c.getContext('2d'), P=(a,b,w,h,col)=>{x.fillStyle=col;x.fillRect(a,b,w,h)};
-  const s='#b5b0a6', s2='#8f8a81', s3='#d4d0c8';
-  P(2,56,36,7,s);P(2,56,36,1,s3);P(2,62,36,1,s2);for(let i=6;i<38;i+=8)P(i,57,1,5,s2);
-  P(5,48,30,8,s);P(5,48,30,1,s3);P(10,49,1,7,s2);P(20,49,1,7,s2);P(29,49,1,7,s2);
-  const story=(y,bw,bh,rw)=>{
-    const bx=20-bw/2;P(bx,y,bw,bh,s);P(bx,y,1,bh,s3);P(bx+bw-1,y,1,bh,s2);
-    const rx=20-rw/2;P(rx,y-3,rw,3,s);P(rx,y-3,rw,1,s3);P(rx,y-1,rw,1,s2);P(rx-1,y-4,2,1,s);P(rx+rw-1,y-4,2,1,s);
-    P(rx+2,y-5,rw-4,2,s2);
+function sprWongaksa(){ // 원각사지 십층석탑: 흰 대리석, 아래 3층은 亞자 모양, 화려한 부조
+  const c=mkCanvas(40,96),x=c.getContext('2d'),P=mkP(x);
+  const m='#ecebe5',m2='#c9c7bf',m3='#ffffff',rel='#b3b0a6';
+  // 亞자 기단 3단
+  const base=(y,w,h)=>{const bx=20-w/2;P(bx+3,y,w-6,h,m);P(bx,y+2,w,h-4,m);P(bx,y+2,1,h-4,m3);P(bx+w-1,y+2,1,h-4,m2);P(bx+3,y,w-6,1,m3);
+    for(let i=bx+3;i<bx+w-3;i+=4)P(i,y+2,2,h-4,rel)};
+  base(86,36,9);base(78,32,8);base(71,28,7);
+  // 1~3층: 亞자 몸돌과 기와 모양 지붕돌
+  const story=(y,bw,bh,rw,cross)=>{
+    const bx=20-bw/2;
+    if(cross){P(bx+2,y,bw-4,bh,m);P(bx,y+1,bw,bh-2,m);}else P(bx,y,bw,bh,m);
+    P(bx,y,1,bh,m3);P(bx+bw-1,y,1,bh,m2);
+    if(bh>4)for(let i=bx+2;i<bx+bw-2;i+=3)P(i,y+2,1,bh-4,rel); // 불상·보살 부조
+    const rx=20-rw/2;P(rx,y-3,rw,3,m);P(rx,y-3,rw,1,m3);P(rx,y-1,rw,1,m2);
+    for(let i=rx+1;i<rx+rw-1;i+=2)P(i,y-2,1,1,m2); // 기와골
+    P(rx-1,y-4,2,1,m);P(rx+rw-1,y-4,2,1,m);
   };
-  story(39,14,9,30);story(29,12,6,26);story(21,10,5,22);
-  P(19,4,2,13,s2);P(17,12,6,2,s);P(18,8,4,2,s);P(18,4,4,2,s);P(19,1,2,3,s2);
-  return outline(c,[40,36,32]);
+  story(64,22,7,30,true);story(56,20,5,28,true);story(49,18,4,26,true);
+  // 4~10층: 네모난 몸돌
+  let y=43;for(const [bw,rw] of [[14,22],[13,21],[12,20],[11,18],[10,17],[9,16],[8,14]]){story(y,bw,3,rw,false);y-=6}
+  P(18,3,4,2,m2);P(19,0,2,3,m2);P(17,1,6,1,m);
+  return outline(c,[60,58,54]);
+}
+function sprPalsangjeon(){ // 법주사 팔상전: 나무로 지은 5층 목탑
+  const c=mkCanvas(56,104),x=c.getContext('2d'),P=mkP(x);
+  // 돌 기단과 계단
+  P(4,92,48,10,'#a9a39a');P(4,92,48,2,'#c6c0b6');for(let i=4;i<52;i+=8)P(i,94,1,8,'#8a847b');P(23,96,10,8,'#bdb7ac');
+  const floor=(y,ww,wh,rw)=>{ // y: 지붕 처마선
+    const wx=28-ww/2;
+    P(wx,y,ww,wh,'#efe7d4');
+    for(let i=wx;i<wx+ww;i+=Math.max(5,ww/4|0))P(i,y,2,wh,'#a8432f');P(wx+ww-2,y,2,wh,'#a8432f');
+    if(wh>8){P(wx+ww/2-4,y+3,8,wh-3,'#9a6234');for(let j=y+4;j<y+wh;j+=3)P(wx+ww/2-4,j,8,1,'#c09060')}
+    P(wx-1,y,ww+2,2,'#2e8b6a');P(wx,y,ww,1,'#f2c84b');
+    // 기와 지붕 (처마 끝이 들림)
+    const rx=28-rw/2;for(let k=0;k<5;k++){const w=rw-(4-k)*3;P(28-w/2,y-5+k,w,1,k===4?'#2c3442':'#4a5463')}
+    P(rx-2,y-3,2,2,'#4a5463');P(rx+rw,y-3,2,2,'#4a5463');P(rx-3,y-4,1,1,'#384252');P(rx+rw+2,y-4,1,1,'#384252');
+    for(let i=28-rw/2+2;i<28+rw/2-2;i+=3)P(i,y-1,1,1,'#c9c3b8');
+  };
+  floor(78,40,14,50);floor(64,32,9,42);floor(52,26,7,36);floor(41,20,6,30);floor(31,15,5,24);
+  // 상륜부 (청동)
+  P(27,8,2,18,'#7a6a3a');for(const yy of [10,13,16,19])P(25,yy,6,1,'#a8904a');P(24,22,8,3,'#8a7a4a');P(27,4,2,4,'#a8904a');
+  return outline(c);
 }
 
 /* ── 한국 전통 건물 공통 도구 ── */
@@ -873,9 +902,14 @@ const INFO = {
   buyongji:{who:'부용지',lines:[
     '규장각 앞 연못 부용지는 네모난 연못 가운데에 둥근 섬이 떠 있어요.',
     '"하늘은 둥글고 땅은 네모나다(천원지방)"는 옛사람들의 생각을 담은 모양이랍니다.']},
-  pagoda:{who:'삼층석탑',lines:[
-    '불국사 삼층석탑(석가탑)은 통일신라 시대에 세워진 대표적인 석탑이에요.',
-    '높이와 너비의 비례가 잘 맞아 단정하고 아름다운 탑으로 손꼽힌답니다.']},
+  wongaksa:{who:'원각사지 십층석탑',lines:[
+    '세조 때인 1467년에 세운 조선 초기의 대표적인 석탑이에요. 지금은 서울 탑골공원에 있어요.',
+    '흔한 화강암이 아니라 흰 대리석으로 만들었고, 탑의 돌마다 부처와 보살, 용, 연꽃 같은 무늬가 화려하게 새겨져 있어요.',
+    '아래쪽 기단과 1~3층은 위에서 보면 亞(아)자 모양이에요. 고려의 경천사지 십층석탑을 닮았답니다.']},
+  palsangjeon:{who:'법주사 팔상전',lines:[
+    '충북 보은 법주사에 있는 팔상전은 우리나라에 하나뿐인 5층 목탑이에요.',
+    '임진왜란 때 불탄 뒤 다시 지어 1626년에 완성했어요. 조선 중기의 건축 솜씨를 보여 주지요.',
+    '석가모니의 일생을 여덟 장면으로 그린 팔상도를 안에 모셔서 \'팔상전\'이라고 불러요.']},
   welcome:{who:'마을 안내판',lines:[
     '★ 한국미술사 마을 ★\n위쪽: 조선 초기 전시실 · 규장각\n아래쪽: 조선 중기 전시실 · 조선 후기 전시실',
     '시대 순서대로 초기 → 중기 → 후기 전시실을 돌아보고, 규장각도 찾아가 보세요!']},
@@ -920,11 +954,12 @@ function buildVillage(){
   for(const [px,py] of [[38,29],[50,30],[38,36],[50,36]]){place(sprTree(px*13+py,'pine'),px,py);block(px,py,px,py)}
 
   // 광장: 석탑, 등불, 안내판, 화원의 서안
-  place(sprPagoda(),27,21,{x:28*T,label:'삼층석탑'});block(27,20,28,21);
-  PLACES.push({x0:26,y0:19,x1:29,y1:22,key:'pagoda'});
+  place(sprWongaksa(),23,20,{x:24*T,label:'원각사지 십층석탑'});block(23,19,24,20);
+  place(sprPalsangjeon(),31,20,{x:32*T,label:'법주사 팔상전'});block(31,19,32,20);
+  PLACES.push({x0:22,y0:18,x1:25,y1:21,key:'wongaksa'},{x0:30,y0:18,x1:33,y1:21,key:'palsangjeon'});
   for(const [lx,ly] of [[21,17],[34,17],[21,26],[34,26]]){place(sprLamp(),lx,ly);block(lx,ly,lx,ly)}
   place(sprSign(),25,25);block(25,25,25,25);PLACES.push({x0:25,y0:25,x1:25,y1:25,key:'welcome'});
-  place(sprDesk(),32,19);block(32,19,32,19);PLACES.push({x0:32,y0:19,x1:32,y1:19,key:'desk'});
+  place(sprDesk(),32,24);block(32,24,32,24);PLACES.push({x0:32,y0:24,x1:32,y1:24,key:'desk'});
 
   // 가장자리 숲
   let seed=1;
@@ -1056,7 +1091,7 @@ function findTarget(){
   const [fx,fy]=facingPoint();
   if(Math.hypot(fx-npc.x,fy-(npc.y-4))<14)return {kind:'npc'};
   const tx=Math.floor(fx/T), ty=Math.floor(fy/T);
-  for(const p of PLACES)if(tx>=p.x0&&tx<=p.x1&&ty>=p.y0&&ty<=p.y1&&(['buyongji','welcome','desk','pagoda'].includes(p.key)?true:player.dir==='up'))return {kind:'place',p};
+  for(const p of PLACES)if(tx>=p.x0&&tx<=p.x1&&ty>=p.y0&&ty<=p.y1&&(['buyongji','welcome','desk','wongaksa','palsangjeon'].includes(p.key)?true:player.dir==='up'))return {kind:'place',p};
   // 연못은 물가 어디서든
   if(at(tx,ty)==='W')return {kind:'place',p:{key:'buyongji'}};
   return null;
@@ -1232,7 +1267,7 @@ function createLoop(t){
    - QUESTS: 어떤 조건을 채우면 어떤 아이템을 주는지
      조건에 쓸 수 있는 기록:
        p.flags.talked         큐레이터와 이야기함
-       p.flags['read_키']     그곳 설명을 읽음 (키: early middle late kyujang buyongji pagoda welcome desk)
+       p.flags['read_키']     그곳 설명을 읽음 (키: early middle late kyujang buyongji wongaksa palsangjeon welcome desk)
        p.flags['visit_장소']  그 장소 앞에 가 봄
        p.flags.friend         방 코드로 친구와 함께 있었음
        p.quiz.키              그곳 퀴즈를 맞힘
@@ -1244,7 +1279,8 @@ const ITEMS = {
   mukjuk:   {name:'묵죽 족자',       desc:'먹으로 그린 대나무 족자예요. 곧게 뻗은 대나무는 선비의 굳은 절개를 뜻했어요.'},
   moonjar:  {name:'달항아리',        desc:'보름달처럼 둥글고 흰 큰 백자 항아리예요. 조선 후기 백자의 넉넉한 아름다움을 보여 줘요.'},
   book:     {name:'규장각 책',       desc:'규장각에서 펴내고 보관한 책이에요. 정조와 학자들은 이곳에서 많은 책을 펴냈어요.'},
-  rubbing:  {name:'석탑 탁본',       desc:'종이를 대고 먹방망이로 두드려 무늬를 그대로 떠낸 것을 탁본이라고 해요.'},
+  rubbing:  {name:'석탑 부조 탁본',   desc:'원각사지 십층석탑의 부조를 종이에 떠낸 탁본이에요. 종이를 대고 먹방망이로 두드려 무늬를 옮겨요.'},
+  pungyeong:{name:'풍경(風磬)',      desc:'절 건물의 처마 끝에 다는 작은 종이에요. 물고기 모양 추가 바람에 흔들리며 맑은 소리를 내요.'},
   map:      {name:'마을 탐험 지도',   desc:'세 전시실과 규장각을 모두 찾아간 탐험가에게 주는 지도예요.'},
   knot:     {name:'우정 매듭',       desc:'전통 매듭 공예로 엮은 매듭이에요. 함께 모험한 친구를 기억하게 해 줘요.'},
   medal:    {name:'미술사 박사 메달', desc:'마을의 모든 퀴즈를 맞힌 사람만 받을 수 있는 메달이에요. 정말 대단해요!'},
@@ -1258,8 +1294,10 @@ const QUIZ = {
            explain:'「인왕제색도」, 「금강전도」가 대표적인 진경산수화예요.'},
   kyujang:{q:'창덕궁 후원에 규장각을 세운 조선의 왕은 누구일까요?', choices:['정조','세종','태조'], answer:0,
            explain:'정조는 즉위한 해에 규장각을 세워 학문과 문화를 꽃피웠어요.'},
-  pagoda: {q:'불국사 삼층석탑(석가탑)은 어느 시대에 세워졌을까요?', choices:['통일신라','고려','조선'], answer:0,
-           explain:'통일신라 시대에 세워진, 비례가 아름다운 석탑이에요.'},
+  wongaksa:{q:'원각사지 십층석탑은 어떤 돌로 만들었을까요?', choices:['대리석','화강암','벽돌'], answer:0,
+           explain:'흰 대리석이라 섬세한 부조를 새길 수 있었어요.'},
+  palsangjeon:{q:'법주사 팔상전은 몇 층짜리 목탑일까요?', choices:['5층','3층','10층'], answer:0,
+           explain:'팔상전은 우리나라에 하나뿐인 5층 목탑이에요.'},
 };
 const VISIT_PLACES=['조선 초기 전시실 앞','조선 중기 전시실 앞','조선 후기 전시실 앞','규장각 · 부용지'];
 const QUESTS = [
@@ -1269,10 +1307,11 @@ const QUESTS = [
   {item:'mukjuk',   how:'조선 중기 전시실 퀴즈 맞히기',     cond:p=>p.quiz.middle},
   {item:'moonjar',  how:'조선 후기 전시실 퀴즈 맞히기',     cond:p=>p.quiz.late},
   {item:'book',     how:'규장각 퀴즈 맞히기',              cond:p=>p.quiz.kyujang},
-  {item:'rubbing',  how:'삼층석탑 퀴즈 맞히기',             cond:p=>p.quiz.pagoda},
+  {item:'rubbing',  how:'원각사지 십층석탑 퀴즈 맞히기',    cond:p=>p.quiz.wongaksa},
+  {item:'pungyeong',how:'법주사 팔상전 퀴즈 맞히기',        cond:p=>p.quiz.palsangjeon},
   {item:'map',      how:'세 전시실과 규장각에 모두 가 보기',  cond:p=>VISIT_PLACES.every(k=>p.flags['visit_'+k])},
   {item:'knot',     how:'방 코드로 들어가 친구와 함께 있기',  cond:p=>p.flags.friend},
-  {item:'medal',    how:'마을의 퀴즈 5개 모두 맞히기',       cond:p=>Object.keys(QUIZ).every(k=>p.quiz[k])},
+  {item:'medal',    how:'마을의 퀴즈 6개 모두 맞히기',       cond:p=>Object.keys(QUIZ).every(k=>p.quiz[k])},
 ];
 
 // 몸에 착용할 수 있는 아이템: hand(손에 들기, 하나만) / neck(목에 걸기)
@@ -1288,6 +1327,8 @@ const ICON_DRAW = {
   mukjuk:(P)=>{P(3,1,10,1,'#5a3a1e');P(4,2,8,12,'#b9a77a');P(5,3,6,10,'#f4efe2');P(7,3,1,10,'#1f1f22');P(9,4,1,9,'#6a6a70');P(8,5,2,1,'#1f1f22');P(6,8,1,1,'#1f1f22');P(8,10,2,1,'#1f1f22');P(3,14,10,1,'#5a3a1e')},
   moonjar:(P)=>{pcirc(ICTX,8,9,6,'#f4f1e8');pcirc(ICTX,7,8,4,'#fbf9f3');P(6,1,4,2,'#ece8dc');P(5,1,6,1,'#d9d4c6');P(4,13,8,1,'#d9d4c6')},
   book:(P)=>{P(3,2,10,12,'#2f4b6f');P(3,2,10,1,'#46658f');P(9,3,2,7,'#f3ecd8');P(9,4,2,1,'#2a2220');P(9,6,2,1,'#2a2220');for(const y of [3,6,9,12])P(4,y,1,1,'#e8e2d0');P(3,14,10,1,'#1f3354')},
+  pungyeong:(P)=>{P(7,1,2,2,'#7a6a3a');P(5,3,6,2,'#a8904a');P(4,5,8,5,'#b89a4a');P(4,5,1,5,'#d9bc6a');P(3,10,10,1,'#8a7a3a');P(7,11,2,2,'#5a4a2a');
+    P(5,13,6,2,'#2f6fd0');P(4,13,1,1,'#2f6fd0');P(11,12,1,3,'#2f6fd0');P(6,13,1,1,'#ffffff')},
   rubbing:(P)=>{P(2,1,12,14,'#f7f1e1');P(2,1,12,1,'#d8cfbf');P(7,3,2,2,'#4a4a55');P(5,5,6,1,'#4a4a55');P(6,6,4,2,'#4a4a55');P(4,8,8,1,'#4a4a55');P(5,9,6,2,'#4a4a55');P(3,11,10,1,'#4a4a55');P(4,12,8,2,'#4a4a55')},
   map:(P)=>{P(1,3,5,11,'#ead7a4');P(6,2,5,11,'#f3e6c4');P(11,3,4,11,'#ead7a4');P(3,6,9,1,'#c0392b');P(8,6,1,5,'#c0392b');P(8,10,4,1,'#c0392b');P(12,9,2,2,'#c0392b');P(3,11,2,2,'#3f7fc4');P(9,3,2,2,'#3f8f43')},
   knot:(P)=>{P(6,1,4,3,'#c0392b');P(4,4,8,4,'#d8423a');P(3,5,2,2,'#c0392b');P(11,5,2,2,'#c0392b');P(7,4,2,4,'#a32b20');P(6,8,4,2,'#c0392b');
