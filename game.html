@@ -16,6 +16,7 @@ html,body{height:100%;background:#0d1220;color:var(--ink);overflow:hidden;
   -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
 canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block}
 button{font:inherit;color:inherit;cursor:pointer}
+[hidden]{display:none!important}
 
 /* ── 공통 레트로 창 ── */
 .win{background:linear-gradient(180deg,var(--win),var(--win2));
@@ -285,7 +286,7 @@ body.touch #help{display:none}
     <div class="tNav"><button class="pbtn sub" id="tBack">◀ 이전</button><button class="pbtn" id="tNext">다음 ▶</button></div>
   </div>
   <div id="bag" class="win" role="dialog" aria-labelledby="bagTitle">
-    <div class="bagHead"><h2 id="bagTitle">가방</h2><span id="bagCount"></span><button class="pbtn sub small" id="bagClose">닫기</button></div>
+    <div class="bagHead"><h2 id="bagTitle">가방</h2><span id="bagCount"></span><button class="pbtn sub small" id="bagPet" hidden>애완동물 놓아주기</button><button class="pbtn sub small" id="bagClose">닫기</button></div>
     <div id="bagGrid"></div>
     <div id="bagInfo"></div>
   </div>
@@ -1313,7 +1314,7 @@ function scatterAnimals(kinds,n,seed){
     if(!['G','F','M'].includes(ground[y][x])||solid[y][x])continue;
     addAnimal(kinds[n%kinds.length],x,y);n--}
 }
-function addAnimal(kind,tx,ty,opt={}){const a={kind,x:tx*T+8,y:ty*T+12,dir:'left',t:Math.random()*3,mv:[0,0],walk:0,sheet:animalSheet(kind),catchable:['rabbit','dog','cat'].includes(kind),...opt};ANIMALS.push(a);return a}
+function addAnimal(kind,tx,ty,opt={}){const a={kind,x:tx*T+8,y:ty*T+12,dir:'left',t:Math.random()*3,mv:[0,0],walk:0,sheet:animalSheet(kind),catchable:['rabbit','dog','cat','chick'].includes(kind),...opt};ANIMALS.push(a);return a}
 // 사람(NPC)
 const LK=o=>({skin:'#efc29c',hair:'topknot',hairColor:'#2a2220',hat:'none',outfit:'baji',top:'#ece6d6',bottom:'#ece6d6',...o});
 function mkNPC(o){const n={dir:'down',walk:0,ph:Math.random()*7,...o};n.sheet=n.animal?animalSheet(n.animal):buildSheet(n.look);NPCS.push(n);return n}
@@ -1809,6 +1810,22 @@ function setPet(kind){
   if(!kind){pet=null;return}
   pet={kind,x:player.x-14,y:player.y,dir:'left',walk:0,sheet:animalSheet(kind),name:`${look.name}의 ${ANIMAL_NAME[kind]}`};
 }
+function petSound(){const s={rabbit:'(코를 씰룩씰룩)',dog:'멍멍!',cat:'냐옹~',chick:'삐약삐약!',blackcat:'캬악!'}[pet.kind];floatText(s,pet.x,pet.y-18,1200)}
+function petMenu(){
+  if(!pet)return;
+  if(pet.quest){petSound();openDialog('잡은 고양이',['병아리를 물고 있던 고양이예요. 주인 영감에게 데려다 줘야 해요!']);return}
+  const nm=ANIMAL_NAME[pet.kind];
+  openDialog(pet.name,[{menu:true,q:`${nm}가 나를 바라보고 있어요. 어떻게 할까요?`,choices:['쓰다듬기','놓아주기','그대로 두기'],
+    pick:ci=>{if(ci===0){petSound();floatText('♥',pet.x,pet.y-26,1200,'heart')}else if(ci===1)releasePet()}}]);
+}
+function releasePet(){
+  if(!pet||pet.quest)return;
+  const nm=ANIMAL_NAME[pet.kind];
+  const a=addAnimal(pet.kind,0,0);a.x=pet.x;a.y=pet.y;a.t=0;
+  pet=null;prog.pet=null;saveProg();makeTags();
+  floatText('안녕~',a.x,a.y-18,1400);
+  toast(`<b style="color:var(--gold)">${nm}</b>를 놓아주었어요<br><small style="color:var(--muted)">다시 잡으면 또 친구가 될 수 있어요</small>`,2400);
+}
 function adopt(a){
   const i=ANIMALS.indexOf(a);if(i>=0)ANIMALS.splice(i,1);
   if(pet&&!pet.quest)addAnimal(pet.kind,Math.floor(pet.x/T),Math.floor(pet.y/T)); // 전에 데리고 다니던 동물은 놓아준다
@@ -1902,7 +1919,7 @@ function interact(){
       toast('검은 고양이를 잡았어요!<br><small style="color:var(--muted)">주인 영감에게 데려가요</small>',2600);return}
     adopt(a);return;
   }
-  if(t.kind==='pet'){const s={rabbit:'(코를 씰룩씰룩)',dog:'멍멍!',cat:'냐옹~',chick:'삐약삐약!',blackcat:'캬악!'}[pet.kind];floatText(s,pet.x,pet.y-18,1200);return}
+  if(t.kind==='pet'){petMenu();return}
   if(t.kind==='npc'){if(t.n.talk)t.n.talk(t.n);return}
   const key=t.p.key;
   if(key==='tower'){openTower();return}
@@ -1920,9 +1937,9 @@ function showLine(){
   const d=dialog, box=$('#dialog .txt'), chs=$('#dialog .choices');$('#dialog .who').textContent=d.who;
   chs.innerHTML='';clearInterval(typeTimer);
   const line=d.lines[d.i];
-  if(typeof line==='object'){ // 퀴즈
-    d.quiz=line;d.typing=false;box.textContent='Q. '+line.q;$('#dialog .next').style.visibility='hidden';
-    d.order=line.choices.map((_,i)=>i).sort(()=>Math.random()-.5);
+  if(typeof line==='object'){ // 퀴즈 또는 고르기 메뉴
+    d.quiz=line;d.typing=false;box.textContent=(line.menu?'':'Q. ')+line.q;$('#dialog .next').style.visibility='hidden';
+    d.order=line.choices.map((_,i)=>i);if(!line.menu)d.order.sort(()=>Math.random()-.5);
     d.order.forEach((ci,k)=>{const b=document.createElement('button');b.className='choice';b.textContent=`${k+1}. ${line.choices[ci]}`;
       b.onclick=e=>{e.stopPropagation();answerQuiz(ci)};chs.append(b)});
     return;
@@ -1933,6 +1950,7 @@ function showLine(){
 }
 function answerQuiz(ci){
   const d=dialog;if(!d||!d.quiz)return;const q=d.quiz;d.quiz=null;
+  if(q.menu){closeDialog();q.pick(ci);return}
   if(ci===q.answer){
     prog.quiz[q.key]=true;saveProg();
     d.lines.splice(d.i+1,0,'⭕ 정답이에요! '+(q.explain||''));
@@ -2321,6 +2339,7 @@ function toggleBag(force){
 function renderBag(){
   const grid=$('#bagGrid');grid.innerHTML='';
   const total=QUESTS.length, have=QUESTS.filter(q=>prog.items[q.item]).length;
+  const bp=$('#bagPet');bp.hidden=!(pet&&!pet.quest);if(pet)bp.textContent=`${ANIMAL_NAME[pet.kind]} 놓아주기`;
   $('#bagCount').textContent=`${have} / ${total}개 모음 · ${BAG_SIZE}칸`;
   for(const q of QUESTS){
     const it=ITEMS[q.item];if(!it)continue;
@@ -2354,6 +2373,7 @@ function talkDalma(){
 }
 $('#bagBtn').onclick=()=>toggleBag();
 $('#bagClose').onclick=()=>toggleBag(false);
+$('#bagPet').onclick=()=>{toggleBag(false);releasePet()};
 
 /* ════════════════════════════════════════════════
    8-2. 나만의 탑 만들기 (미니게임)
