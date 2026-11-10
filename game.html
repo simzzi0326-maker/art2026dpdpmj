@@ -95,6 +95,28 @@ button{font:inherit;color:inherit;cursor:pointer}
 .slot.on{outline-color:var(--gold)}
 .slot.worn::before{content:'착용';position:absolute;left:-4px;bottom:-6px;font-size:9px;background:#2f6fd0;color:#fff;padding:1px 3px}
 .equipBtn{margin-top:8px}
+/* 청화백자 · 달항아리 */
+#designUI,#jarUI{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(760px,calc(100% - 20px));max-height:calc(100% - 20px);
+  overflow:auto;padding:14px 16px;display:none;flex-direction:column;gap:10px;z-index:4}
+#designUI .tHead,#jarUI .tHead{display:flex;align-items:center;gap:10px}
+#designUI h2,#jarUI h2{font-size:18px;font-weight:400;color:var(--gold)}
+.tsub{flex:1;color:var(--muted);font-size:12px}
+#designUI .tBody{display:flex;gap:14px;align-items:flex-start}
+.dWrap{position:relative;flex:0 0 auto}
+#dCanvas{width:270px;height:324px;background:#cdbf9f;border:3px solid #0a0f1b;touch-action:none;image-rendering:auto;cursor:crosshair}
+#dFlash{position:absolute;inset:0;background:radial-gradient(#ffd27a,#e0701e);opacity:0;transition:opacity .4s;pointer-events:none}
+#dTools{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px}
+.dRow{display:flex;gap:6px;flex-wrap:wrap}
+.dGrp .tip{margin-bottom:4px}
+#jCanvas{width:100%;max-width:480px;align-self:center;border:3px solid #0a0f1b;image-rendering:auto}
+#jarUI .tNav{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tag.float{font-size:14px;color:#fff;animation:floatUp 1.6s ease-out forwards}
+.tag.float.big{font-size:22px;color:#fff7a8}
+.tag.float.echo{font-size:15px;color:#e0e8ff;opacity:.8}
+.tag.float.heart{font-size:20px;color:#ff6b8a}
+@keyframes floatUp{from{margin-top:0;opacity:1}to{margin-top:-30px;opacity:0}}
+.tag.pet{font-size:10px;color:#ffd6e8}
+@media (max-width:640px){#designUI .tBody{flex-direction:column;align-items:center}#dCanvas{width:225px;height:270px}}
 /* 탑 만들기 */
 #towerUI{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(720px,calc(100% - 20px));max-height:calc(100% - 20px);
   overflow:auto;padding:14px 16px;display:none;flex-direction:column;gap:12px;z-index:4}
@@ -247,6 +269,16 @@ body.touch #help{display:none}
   <canvas id="mini"></canvas>
   <div id="help">이동: 방향키 / WASD · 달리기: Shift · 살펴보기: Space · 가방: I</div>
   <div id="dialog" class="win"><div class="who"></div><div class="txt"></div><div class="choices"></div><div class="next">▼</div></div>
+  <div id="designUI" class="win" role="dialog" aria-labelledby="dTitle">
+    <div class="tHead"><h2 id="dTitle">청화백자 꾸미기</h2><span class="tsub">하얀 항아리에 푸른 청화 안료로 무늬를 그려요</span><button class="pbtn sub small" id="dClose">닫기</button></div>
+    <div class="tBody"><div class="dWrap"><canvas id="dCanvas" width="300" height="360"></canvas><div id="dFlash"></div></div><div id="dTools"></div></div>
+  </div>
+  <div id="jarUI" class="win" role="dialog" aria-labelledby="jTitle">
+    <div class="tHead"><h2 id="jTitle">달항아리 만들기</h2><span id="jStep" class="tsub"></span><button class="pbtn sub small" id="jClose">닫기</button></div>
+    <canvas id="jCanvas" width="480" height="300"></canvas>
+    <p id="jMsg" class="tip"></p>
+    <div class="tNav"><span class="tip">Space 키나 버튼으로 멈춰요</span><button class="pbtn" id="jHit">지금!</button><button class="pbtn" id="jAgain">다시 하기</button></div>
+  </div>
   <div id="towerUI" class="win" role="dialog" aria-labelledby="tTitle">
     <div class="tHead"><h2 id="tTitle">나만의 탑 만들기</h2><span id="tStep"></span><button class="pbtn sub small" id="tClose">닫기</button></div>
     <div class="tBody"><canvas id="tPrev" width="80" height="170"></canvas><div id="tPanel"></div></div>
@@ -321,7 +353,8 @@ const SW=20, SH=30;
 function drawChar(ctx, L, dir, frame){
   const P=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h)};
   const sk=L.skin, sk2=shade(sk,-.16);
-  const hc=L.hairColor, h2=shade(hc,-.35), h3=shade(hc,.28);
+  const bald=L.hair==='shaved';
+  const hc=bald?shade(L.skin,-.1):L.hairColor, h2=bald?shade(L.skin,-.16):shade(hc,-.35), h3=bald?shade(L.skin,-.04):shade(hc,.28);
   const tp=L.top, t2=shade(tp,-.25), t3=shade(tp,.22);
   const bt=L.bottom, b2=shade(bt,-.25), b3=shade(bt,.2);
   const shoe='#3a2a22', white='#f8f3e6', eye='#24181a', mouth='#b85c50', blush='#f2a0a0';
@@ -370,7 +403,7 @@ function drawChar(ctx, L, dir, frame){
       P(7,10,1,2,eye);P(12,10,1,2,eye);P(6,12,1,1,blush);P(13,12,1,1,blush);P(9,13,2,1,mouth);
       // 머리카락
       P(6,3,8,1,hc);P(5,4,10,3,hc);
-      const tied = hs==='topknot'||hs==='bun';
+      const tied = hs==='topknot'||hs==='bun'||hs==='shaved'||hs==='gache';
       if(tied){P(4,5,1,5,hc);P(15,5,1,5,hc);P(5,7,1,2,hc);P(14,7,1,2,hc)}
       else{
         P(4,5,1,5,hc);P(15,5,1,5,hc);
@@ -382,7 +415,7 @@ function drawChar(ctx, L, dir, frame){
       if(hs==='bun'){P(9,4,2,1,h2);P(2,12,2,1,gold);P(16,12,2,1,gold)}
       P(7,4,2,1,h3);P(6,5,1,1,h3);P(11,4,1,1,h3);
     }else{
-      const low = hs==='bob'?13:(hs==='bun'||hs==='topknot')?11:12;
+      const low = hs==='bob'?13:(hs==='bun'||hs==='topknot'||hs==='gache')?11:hs==='shaved'?10:12;
       P(6,13,8,2,sk2);
       P(6,3,8,1,hc);P(5,4,10,low-3,hc);P(4,5,1,low-5,hc);P(15,5,1,low-5,hc);
       P(7,5,3,1,h3);P(7,8,1,low-8,h2);P(11,7,1,low-7,h2);P(9,6,1,2,h3);
@@ -428,7 +461,7 @@ function drawChar(ctx, L, dir, frame){
     P(5,6,8,8,sk);P(6,14,6,1,sk);P(4,11,1,1,sk);P(11,13,1,1,sk2);
     P(6,10,1,2,eye);P(7,12,1,1,blush);P(5,13,1,1,mouth);
     P(6,3,7,1,hc);P(5,4,10,3,hc);P(11,5,4,7,hc);P(14,6,1,4,h2);
-    const tied = hs==='topknot'||hs==='bun';
+    const tied = hs==='topknot'||hs==='bun'||hs==='shaved'||hs==='gache';
     if(!tied){P(5,7,3,1,hc);P(5,8,1,1,hc);P(10,7,1,3,hc)}
     else{P(10,7,1,2,hc)}
     if(hs==='bob'){P(10,5,5,9,hc);P(9,7,1,5,hc);P(13,12,2,2,h2)}
@@ -450,6 +483,9 @@ function drawChar(ctx, L, dir, frame){
     const fl=['#ff8fb1','#ffd34d','#ffffff','#ff8fb1','#c99cff'];
     P(5,4,10,1,'#4c9a3c');
     [5,7,9,11,13].forEach((x,i)=>{P(x,3,2,2,fl[i]);P(x+1,3,1,1,shade(fl[i],.4))});
+  }
+  if(hs==='gache'){ // 가체: 땋은 머리를 크게 얹은 모양
+    P(5,1,10,4,hc);P(4,2,12,2,hc);for(let i=5;i<15;i+=2)P(i,2,1,1,h3);P(6,4,8,1,h2);if(dir!=='up')P(6,3,8,1,h3);
   }
   /* ---------- 곤룡포(왕)·단령(관리)의 흉배와 허리띠 ---------- */
   if(robe==='king'||robe==='official'){
@@ -479,6 +515,30 @@ function drawChar(ctx, L, dir, frame){
     if(dir==='down'){P(8,15,1,1,rb);P(11,15,1,1,rb);P(8,16,1,1,rb);P(11,16,1,1,rb);P(9,17,2,2,gd);P(9,17,1,1,gl)}
     else if(dir==='up'){P(7,15,6,1,rb)}
     else{P(8,15,1,1,rb);P(7,16,1,1,rb);P(6,17,2,2,gd);P(6,17,1,1,gl)}
+  }
+  if(L.back==='shell'){ // 거북 등껍질을 가방처럼 메기
+    const sh='#5a7a3a', sl='#3f5a28', rim='#c9b06a';
+    if(dir==='up'){pell(ctx,10,19,6,6,sh);P(5,19,10,1,rim);for(const [a,b] of [[8,16],[11,16],[7,20],[12,20],[9,23]])P(a,b,2,1,sl);P(9,18,2,3,shade(sh,.15))}
+    else if(dir==='down'){P(6,15,1,4,'#6b4a2f');P(13,15,1,4,'#6b4a2f');P(3,17,1,6,sh);P(16,17,1,6,sh)}
+    else{pell(ctx,14,19,3,5,sh);P(15,16,1,7,sl);P(12,15,2,1,'#6b4a2f')}
+  }
+  if(L.hand==='bamboo'||L.hand==='gyeomjae'||L.hand==='hol'){
+    let hx,hy,side;
+    if(dir==='down'){hx=4;hy=20+(f2?1:0);side=-1}else if(dir==='up'){hx=14;hy=20+(f1?1:0);side=1}else{hx=frame===0?9:f1?7:11;hy=20;side=-1}
+    const X=v=>side<0?v:SW-1-v;
+    if(L.hand==='hol'){ // 홀: 두 손으로 받쳐 든 길쭉한 판
+      if(dir==='down'){P(9,12,2,8,'#f1ead8');P(9,12,2,1,'#c9c3b8')}else if(dir==='up'){}else{P(hx-2,13,2,8,'#f1ead8')}
+    }else if(dir==='down'||dir==='up'){
+      const col=L.hand==='bamboo'?'#6fae4f':'#5a3a1e', node=L.hand==='bamboo'?'#3f7a32':'#3a2a1e';
+      for(let k=0;k<10;k++)P(X(3),hy-k,1,1,k%4===3?node:col);
+      if(L.hand==='bamboo'){P(X(2),hy-10,1,1,'#4f9a3c');P(X(4),hy-9,1,1,'#4f9a3c');P(X(1),hy-11,1,1,'#4f9a3c')}
+      else{P(X(3),hy-11,1,1,'#f1ead8');P(X(3),hy-13,1,2,'#1f1f22');P(X(2),hy-12,1,1,'#1f1f22');P(X(4),hy-12,1,1,'#1f1f22');P(X(3),hy+1,1,1,'#c0392b')}
+    }else{
+      const col=L.hand==='bamboo'?'#6fae4f':'#5a3a1e';
+      for(let k=0;k<6;k++)P(hx-1-k,hy-1-k,1,1,col);
+      if(L.hand==='gyeomjae'){P(Math.max(1,hx-7),hy-8,1,2,'#1f1f22')}else P(Math.max(1,hx-7),hy-8,2,1,'#4f9a3c');
+    }
+    P(hx,hy,2,1,sk);
   }
   if(L.hand==='hammer'){
     let hx,hy,side;
@@ -609,14 +669,33 @@ function drawStars(){
 /* ════════════════════════════════════════════════
    4. 지도: 타일
    ════════════════════════════════════════════════ */
-const T=16, MW=56, MH=44;
+const T=16; let MW=64, MH=48;
 // G 풀, F 꽃밭, P 흙길, S 돌바닥, W 물, D 모래
+// 서로 다른 땅이 만나는 곳을 들쭉날쭉하게 섞는다
+function softEdge(x,r,tx,ty,self,col,depth){
+  const other=(dx,dy)=>{const k=at(tx+dx,ty+dy);return k==='G'||k==='F'||k==='K'};
+  x.fillStyle=col;
+  for(let i=0;i<T;i++){
+    if(other(0,-1)){x.fillRect(i,0,1,1+(r()*depth|0))}
+    if(other(0,1)){const h=1+(r()*depth|0);x.fillRect(i,T-h,1,h)}
+    if(other(-1,0)){x.fillRect(0,i,1+(r()*depth|0),1)}
+    if(other(1,0)){const w=1+(r()*depth|0);x.fillRect(T-w,i,w,1)}
+  }
+  // 모서리를 둥글게
+  const c=(dx,dy,px,py)=>{if(other(dx,0)&&other(0,dy)){for(let k=0;k<5;k++)for(let j=0;j<5-k;j++)x.fillRect(px?T-1-k:k,py?T-1-j:j,1,1)}};
+  c(-1,-1,0,0);c(1,-1,1,0);c(-1,1,0,1);c(1,1,1,1);
+}
 function makeTile(kind, tx, ty, at){
   const c=mkCanvas(T,T), x=c.getContext('2d'), r=mulberry32(tx*928371+ty*1237+kind.charCodeAt(0)*77);
   const P=(a,b,w,h,col)=>{x.fillStyle=col;x.fillRect(a,b,w,h)};
   const grass=()=>{P(0,0,T,T,'#5aa04a');for(let i=0;i<14;i++){const a=r()*T|0,b=r()*T|0;P(a,b,1,1,r()<.5?'#4b8c3e':'#69b257')}
     for(let i=0;i<3;i++){const a=r()*14|0,b=2+r()*13|0;P(a,b,1,1,'#3f7d36');P(a+1,b-1,1,1,'#3f7d36');P(a+2,b,1,1,'#3f7d36')}};
   if(kind==='grass'||kind==='G') grass();
+  else if(kind==='K'){P(0,0,T,T,'#3f7d36');for(let i=0;i<16;i++)P(r()*T|0,r()*T|0,1,1,r()<.5?'#356b2e':'#4b8c3e')}
+  else if(kind==='M'){P(0,0,T,T,'#a9c9b0');for(let i=0;i<12;i++)P(r()*T|0,r()*T|0,1,1,r()<.5?'#9bbda4':'#c3dccb');for(let i=0;i<2;i++){const a=r()*14|0,b=r()*14|0;P(a,b,2,1,'#f2b8c8')}softEdge(x,r,tx,ty,'M','#5aa04a',3)}
+  else if(kind==='R'){P(0,0,T,T,'#76797e');for(let i=0;i<14;i++)P(r()*T|0,r()*T|0,1,1,r()<.5?'#64676c':'#8a8d92');if(r()<.5){const a=r()*12|0,b=r()*12|0;P(a,b,4,1,'#5a5d62');P(a+3,b+1,1,2,'#5a5d62')}softEdge(x,r,tx,ty,'R','#5aa04a',3)}
+  else if(kind==='B'){P(0,0,T,T,'#a8743f');for(let y=0;y<T;y+=4){P(0,y,T,1,'#7a4e2c')}P(0,0,1,T,'#6b4226');P(T-1,0,1,T,'#6b4226');for(let i=0;i<4;i++)P(r()*T|0,r()*T|0,1,1,'#c08a52')}
+  else if(kind==='J'){P(0,0,T,T,'#d4cdbd');for(let i=0;i<5;i++){const a=r()*12|0,b=r()*12|0,w=3+(r()*4|0);P(a,b,w,1,'#bcb4a2');P(a,b,1,3,'#bcb4a2')}for(let i=0;i<6;i++)P(r()*T|0,r()*T|0,1,1,'#e4dece')}
   else if(kind==='F'){grass();const cols=['#ff8fb1','#fff3a8','#ffffff','#c99cff','#ff6b5a'];
     for(let i=0;i<4;i++){const a=1+r()*13|0,b=1+r()*13|0,cc=cols[r()*cols.length|0];P(a,b,2,2,cc);P(a,b+2,1,1,'#3f7d36')}}
   else if(kind==='P'||kind==='D'){
@@ -624,7 +703,9 @@ function makeTile(kind, tx, ty, at){
     P(0,0,T,T,base);for(let i=0;i<12;i++)P(r()*T|0,r()*T|0,1,1,r()<.5?d1:l1);
     if(kind==='P')for(let i=0;i<2;i++){const a=r()*13|0,b=r()*13|0;P(a,b,2,1,'#a88550')}
     // 풀과 닿는 가장자리
-    const g=(dx,dy)=>{const k=at(tx+dx,ty+dy);return k==='G'||k==='F'};
+    const g=(dx,dy)=>{const k=at(tx+dx,ty+dy);return k==='G'||k==='F'||k==='K'||k==='M'};
+    const gc=(dx,dy,px,py)=>{if(g(dx,0)&&g(0,dy)){x.fillStyle='#5aa04a';for(let k=0;k<4;k++)for(let j=0;j<4-k;j++)x.fillRect(px?T-1-k:k,py?T-1-j:j,1,1)}};
+    gc(-1,-1,0,0);gc(1,-1,1,0);gc(-1,1,0,1);gc(1,1,1,1);
     x.fillStyle='#5aa04a';
     for(let i=0;i<T;i++){
       if(g(0,-1)){const h=1+(r()*2|0);x.fillRect(i,0,1,h)}
@@ -924,45 +1005,339 @@ function sprDesk(){ // 화원의 서안: 화선지, 벼루, 붓
   return outline(c);
 }
 
+/* ── 새 지도용 그림들 ── */
+const treeCache={};
+function treeSpr(kind,seed){const k=kind+(seed%6);return treeCache[k]||(treeCache[k]=sprTree((seed%6)*131+7+kind.length,kind))}
+function sprDreamRock(seed){ // 몽유도원도의 기이한 바위산
+  const r=mulberry32(seed), w=40+(r()*26|0), h=62+(r()*44|0), c=mkCanvas(w,h), x=c.getContext('2d'), P=mkP(x);
+  const cols=['#a9c2b8','#93b0a8','#b8c9a8','#c9b48a','#9fb5ae'];
+  const peaks=2+(r()*3|0);
+  for(let i=0;i<peaks;i++){
+    const cx=9+r()*(w-18), top=3+r()*(h*.45), bw=7+r()*10, col=cols[(i+seed)%cols.length], ph=r()*6;
+    for(let y=Math.floor(top);y<h-1;y++){
+      const t=(y-top)/(h-top), ww=Math.max(3,bw*(.3+t*.95)+Math.sin(y*.3+ph)*2), xx=cx+Math.sin(y*.1+ph)*4;
+      P(Math.round(xx-ww/2),y,Math.round(ww),1,col);P(Math.round(xx-ww/2),y,1,1,'#5d7470');
+      if(y%5===0)P(Math.round(xx-ww/4),y,Math.max(1,Math.round(ww/2)),1,shade(col,-.12));
+    }
+    P(Math.round(cx+Math.sin(top*.1+ph)*4)-1,Math.floor(top),3,2,'#e9f1ec');
+  }
+  outline(c,[70,90,86]);
+  for(let i=0;i<5;i++){const a=r()*w|0,b=8+r()*(h-12)|0;if(x.getImageData(a,b,1,1).data[3])P(a,b,2,1,r()<.5?'#3f6b3a':'#f2a6b8')}
+  x.fillStyle='rgba(255,255,255,.5)';for(let i=0;i<2;i++)x.fillRect(r()*w*.4|0,h-12-(r()*18|0),w*.6|0,2);
+  return c;
+}
+function sprCliff(){ // 고사관수도: 덩굴이 늘어진 절벽
+  const c=mkCanvas(72,80),x=c.getContext('2d'),P=mkP(x),r=mulberry32(77);
+  for(let y=4;y<78;y++){const w=Math.round(38+Math.sin(y*.09)*7+(y>48?(y-48)*.9:0));P(70-w,y,w,1,y%7?'#8f8a7c':'#7a7568');P(70-w,y,1,1,'#5a564c')}
+  for(let i=0;i<30;i++)P(30+r()*40|0,6+r()*70|0,1,3,'#6a665a');
+  for(let i=0;i<6;i++){const x0=36+i*5,len=18+(r()*20|0);for(let y=4;y<len;y++){P(x0+Math.round(Math.sin(y*.35+i)*1.5),y,1,1,'#3f7a32');if(y%3===0)P(x0+Math.round(Math.sin(y*.35+i)*1.5)-1,y,1,1,'#5aa04a')}}
+  return outline(c);
+}
+function sprFlatRock(){const c=mkCanvas(36,16),x=c.getContext('2d');pell(x,18,9,16,6,'#8f8a80');pell(x,16,7,12,4,'#a8a398');x.fillStyle='#6f6c67';x.fillRect(4,13,28,1);return outline(c)}
+function sprBigRock(seed){const r=mulberry32(seed),w=30+(r()*16|0),h=20+(r()*12|0),c=mkCanvas(w,h),x=c.getContext('2d');
+  pell(x,w/2|0,h/2+1|0,w/2-2|0,h/2-2|0,'#8d8a85');pell(x,(w/2|0)-3,(h/2|0)-1,w/3|0,h/3|0,'#a6a39d');x.fillStyle='#6f6c67';x.fillRect(4,h-4,w-8,1);return outline(c)}
+function sprKiln(seed){ // 오름가마: 비탈을 따라 여러 칸이 이어진 가마
+  const c=mkCanvas(130,66),x=c.getContext('2d'),P=mkP(x);
+  for(let i=0;i<5;i++){const cx=16+i*22, by=60-i*6; pell(x,cx,by-8,13,10,'#9a5a36');pell(x,cx-2,by-11,9,6,'#b06e45');P(cx-2,by-6,4,4,'#2a1a12');P(cx-1,by-5,2,2,i===0?'#f29a3a':'#3a2a1e')}
+  P(114,10,8,24,'#7a4a2c');P(114,10,8,2,'#5a3420');
+  P(0,56,22,8,'#6b4a2f');for(let k=0;k<4;k++)P(2+k*5,54,4,3,'#8a6a42');P(8,58,6,4,'#f29a3a');P(9,59,4,2,'#ffd34d');
+  outline(c);
+  x.fillStyle='rgba(210,210,210,.55)';pell(x,118,6,6,3,'rgba(210,210,210,.55)');pell(x,124,2,4,2,'rgba(210,210,210,.4)');
+  return c;
+}
+function sprShed(){ // 초가 작업장
+  const c=mkCanvas(96,74),x=c.getContext('2d'),P=mkP(x);
+  for(const px of [8,46,86])P(px,30,4,40,'#6b4a2f');
+  P(10,56,76,3,'#8a6236');for(let i=14;i<84;i+=10){P(i,48,6,8,i%20?'#8c9a8e':'#e9e4d6');P(i+1,47,4,1,'#6f7d71')}
+  for(let y=6;y<34;y++){const t=(y-6)/28,h=Math.round(30+t*18);P(48-h,y,h*2,1,y%3?'#c9a45a':'#b8924c')}
+  pell(x,48,8,32,6,'#d4b06a');for(let i=6;i<92;i+=3)P(i,30+((i*7)%3),1,4,'#a8843f');
+  return outline(c);
+}
+function sprWheel(white){const c=mkCanvas(20,12),x=c.getContext('2d'),P=mkP(x);pell(x,10,8,8,3,'#7a5536');pell(x,10,7,8,2,'#9a7350');P(7,2,6,5,white?'#ece8dc':'#9aa69a');P(8,1,4,1,white?'#ffffff':'#b5c0b5');return outline(c)}
+function sprRack(white){const c=mkCanvas(66,24),x=c.getContext('2d'),P=mkP(x);P(2,18,62,3,'#8a6236');P(4,21,2,3,'#6b4226');P(60,21,2,3,'#6b4226');
+  for(let i=0;i<5;i++){const cx=9+i*12;pell(x,cx,12,5,6,white?'#f1eee4':'#8c9a8e');P(cx-2,4,4,3,white?'#e3ded2':'#748277');if(!white){P(cx-4,11,8,1,'#e9e6da');P(cx-4,14,8,1,'#e9e6da')}}return outline(c)}
+function sprWoodpile(){const c=mkCanvas(30,18),x=c.getContext('2d'),P=mkP(x);for(let r=0;r<3;r++)for(let i=0;i<5-r;i++){const cx=5+i*5+r*2.5,cy=14-r*4;pcirc(x,cx|0,cy,2,'#8a6236');P((cx|0)-1,cy-1,2,2,'#c9a46a')}return outline(c)}
+function sprMaru(){ // 대숲 속 대청마루 집 + 서안 위 풍죽도
+  const W=128,H=100,c=mkCanvas(W,H),x=c.getContext('2d'),P=mkP(x);
+  P(4,88,120,10,'#a9a39a');P(4,88,120,1,'#c6c0b6');
+  P(10,44,108,26,'#efe7d4');for(const lx of [14,52,90])lattice(P,lx,48,24,20);
+  P(8,70,112,18,'#c9945a');for(let i=10;i<118;i+=6)P(i,70,1,18,'#a8743f');P(8,70,112,1,'#e0b07a');P(8,86,112,2,'#8a5a32');
+  for(const px of [8,46,80,116])P(px,40,4,48,'#7a4e2c');
+  P(6,38,116,4,'#6b4226');
+  giwaRoof(P,{cx:64,y0:12,y1:38,top:42,bot:62,curve:1.5,lift:6,ridge:40,base:'#45494f',line:'#585d64',edge:'#34373c',eave:'#2c2f33'});
+  // 서안과 그리다 만 풍죽도
+  P(54,74,26,3,'#6b4226');P(56,77,2,6,'#5a3a1e');P(76,77,2,6,'#5a3a1e');
+  P(56,66,22,9,'#f7f2e4');for(let k=0;k<8;k++){P(60+k,73-k,1,1,'#1f1f22')}for(let k=0;k<5;k++)P(65+k,68+(k>>1),1,1,'#1f1f22');P(70,71,3,1,'#3a3a40');
+  return outline(c);
+}
+function sprSeowon(){ // 서원 강당
+  const W=128,H=96,c=mkCanvas(W,H),x=c.getContext('2d'),P=mkP(x);
+  stoneBase(P,4,80,120,14,64,10);P(10,46,108,34,'#f1ece0');
+  for(const px of [10,34,60,86,114])P(px,42,4,38,'#6a4b33');
+  for(const lx of [16,40,66,92])lattice(P,lx,50,16,26);
+  P(8,40,112,3,'#8a6a4c');
+  giwaRoof(P,{cx:64,y0:14,y1:40,top:40,bot:62,curve:1.4,lift:5,ridge:38,base:'#45494f',line:'#585d64',edge:'#34373c',eave:'#2c2f33'});
+  P(50,42,28,6,'#2a2a30');P(50,42,28,1,'#c9c3b8');
+  return outline(c);
+}
+function sprDisplay(img){ // 내가 디자인한 청화백자를 올린 받침대
+  const c=mkCanvas(30,44),x=c.getContext('2d'),P=mkP(x);
+  P(4,34,22,4,'#7a4e2c');P(6,38,2,6,'#5a3a1e');P(22,38,2,6,'#5a3a1e');P(4,34,22,1,'#9a6a40');
+  if(img){x.imageSmoothingEnabled=true;x.drawImage(img,3,2,24,32)}else{pell(x,15,22,9,11,'#f1eee4');P(11,9,8,4,'#e3ded2')}
+  return outline(c);
+}
+function sprInwang(){ // 인왕산: 비 갠 뒤 젖은 바위 봉우리 (적묵), 산 아래 흰 안개
+  const W=384,H=212,c=mkCanvas(W,H),x=c.getContext('2d'),P=mkP(x),r=mulberry32(55);
+  const peak=(cx,top,bw,col,dark)=>{for(let y=top;y<H-20;y++){const t=(y-top)/(H-20-top),w=Math.round(bw*Math.sqrt(t)*(1+.08*Math.sin(y*.2)));
+    P(cx-w,y,w*2,1,col);P(cx-w,y,2,1,dark);if(y%4===0)P(cx-w+3,y,Math.max(1,w-4),1,shade(col,.08))}};
+  peak(70,92,64,'#4a4d52','#2a2c30');peak(318,96,66,'#45484d','#26282b');
+  peak(130,58,70,'#3a3c40','#1f2124');peak(258,62,72,'#35373b','#1f2124');
+  peak(196,10,62,'#26282b','#141517');peak(196,40,96,'#2e3033','#1a1b1e');
+  // 젖은 바위의 세로 붓자국
+  for(let i=0;i<260;i++){const a=r()*W|0,b=r()*H|0;if(x.getImageData(a,b,1,1).data[3])P(a,b,1,4+(r()*8|0),r()<.6?'#5e6166':'#16171a')}
+  // 산 아래 숲과 오솔길
+  for(let i=0;i<40;i++){const a=r()*W|0,b=170+(r()*30|0);P(a,b,1,7,'#3a2a1e');P(a-3,b-2,7,3,'#2f5a33');P(a-2,b-5,5,3,'#2f5a33');P(a-1,b-7,3,2,'#3f6b43')}
+  for(let y=150;y<H;y++){const w=4+((H-y)>>3);P(196-w,y,w*2,1,'#c9a46a')}P(190,146,12,6,'#3a2a1e');
+  outline(c,[18,18,20]);
+  // 흰 안개 (부드러운 띠)
+  for(const [a,b,rx,ry] of [[90,152,90,8],[290,156,96,9],[196,170,120,7],[30,182,60,6],[350,184,50,6]]){pell(x,a,b,rx,ry,'rgba(248,246,238,.55)');pell(x,a,b,rx-14,ry-3,'rgba(255,255,255,.55)')}
+  return c;
+}
+function sprJeongja(){ // 정자
+  const c=mkCanvas(70,64),x=c.getContext('2d'),P=mkP(x);
+  P(6,50,58,4,'#8a5a32');P(6,50,58,1,'#b07a4a');for(const px of [8,30,40,60])P(px,54,3,8,'#8f8a80');
+  for(const px of [8,60])P(px,22,3,28,'#a8432f');P(6,44,58,2,'#7a4e2c');for(let i=8;i<62;i+=4)P(i,46,1,4,'#7a4e2c');
+  giwaRoof(P,{cx:35,y0:10,y1:24,top:16,bot:30,curve:1.6,lift:5,ridge:12,base:'#4a5463',line:'#5f6b7c',edge:'#384252',eave:'#2c3442'});
+  P(8,24,54,2,'#2e8b6a');
+  return outline(c);
+}
+function sprGeunjeong(){ // 경복궁 근정전: 2단 월대 위 중층 전각
+  const W=224,H=180,c=mkCanvas(W,H),x=c.getContext('2d'),P=mkP(x);
+  const st='#bdb7ac', st2='#9a948a', st3='#d6d0c5';
+  P(0,154,224,24,st);P(0,154,224,2,st3);for(let i=0;i<224;i+=8){P(i,148,2,6,st2)}P(0,148,224,2,st);
+  P(16,130,192,24,st);P(16,130,192,2,st3);for(let i=16;i<208;i+=8)P(i,124,2,6,st2);P(16,124,192,2,st);
+  for(const sx of [96,104,112,120])P(sx,130,4,48,st3);P(94,130,36,48,'rgba(0,0,0,0)');
+  P(98,128,28,50,'#cfc9bd');for(let y=130;y<178;y+=3)P(98,y,28,1,st2);
+  P(30,84,164,46,'#efe7d4');
+  for(let i=0;i<7;i++){const px=30+i*26;P(px,80,4,50,'#a8432f');P(px,80,1,50,'#c45a42')}
+  for(let i=0;i<6;i++){const lx=36+i*26;if(i===2||i===3)flowerDoor(P,lx,90,18,40);else lattice(P,lx,92,18,34)}
+  for(let i=28;i<196;i+=7){P(i,72,5,3,'#2e8b6a');P(i+1,75,3,3,'#2f5fa8');P(i+1,72,3,1,'#f2c84b')}P(26,69,172,3,'#2f5fa8');
+  giwaRoof(P,{cx:112,y0:54,y1:70,top:92,bot:104,curve:1.3,lift:8,ridge:90,base:'#4a5463',line:'#5f6b7c',edge:'#384252',eave:'#2c3442'});
+  P(52,34,120,20,'#efe7d4');for(let i=0;i<6;i++){P(52+i*23,32,3,22,'#a8432f')}for(let i=0;i<5;i++)lattice(P,57+i*23,36,14,14);
+  for(let i=50;i<174;i+=6){P(i,27,4,3,'#2e8b6a');P(i+1,30,2,2,'#2f5fa8')}
+  giwaRoof(P,{cx:112,y0:12,y1:28,top:52,bot:84,curve:1.6,lift:10,ridge:50,base:'#4a5463',line:'#5f6b7c',edge:'#384252',eave:'#2c3442'});
+  P(98,36,28,10,'#1f3354');P(98,36,28,1,'#f2c84b');P(98,45,28,1,'#f2c84b');for(const tx of [102,110,118])P(tx,39,4,4,'#f2c84b');
+  return outline(c);
+}
+function sprIlwol(){ // 일월오봉도
+  const c=mkCanvas(56,36),x=c.getContext('2d'),P=mkP(x);
+  P(0,0,56,34,'#6b2a1e');P(2,2,52,30,'#c9d6c0');
+  for(const [px,ph,pw] of [[8,14,7],[18,20,8],[28,26,10],[38,20,8],[48,14,7]])for(let k=0;k<ph;k++){const w=Math.round(pw*k/ph);P(px-w,28-ph+k,w*2+1,1,k%3?'#3f7a5a':'#2e5f46')}
+  pcirc(x,46,8,3,'#d8322a');pcirc(x,10,8,3,'#f4f1e8');
+  for(let i=4;i<52;i+=4){P(i,29,3,1,'#2f5fa8');P(i+1,30,2,1,'#ffffff')}
+  P(3,16,2,13,'#a8432f');P(1,14,6,3,'#2f6e33');P(51,16,2,13,'#a8432f');P(49,14,6,3,'#2f6e33');
+  P(4,34,3,2,'#4a2a1e');P(49,34,3,2,'#4a2a1e');
+  return outline(c);
+}
+function sprThrone(){const c=mkCanvas(26,22),x=c.getContext('2d'),P=mkP(x);P(2,2,22,12,'#b0262a');P(4,4,18,8,'#c8402f');P(0,0,4,16,'#e8b83a');P(22,0,4,16,'#e8b83a');P(2,14,22,4,'#8a1e1a');P(3,18,3,4,'#6b1a14');P(20,18,3,4,'#6b1a14');return outline(c)}
+function sprPumgye(){const c=mkCanvas(10,12),x=c.getContext('2d'),P=mkP(x);P(2,2,6,9,'#bdb7ac');P(2,2,6,1,'#d6d0c5');P(3,4,1,4,'#8f8a80');P(1,10,8,2,'#9a948a');return outline(c)}
+function sprSipjang(){ // 십장생도 병풍 (8폭)
+  const W=132,H=60,c=mkCanvas(W,H),x=c.getContext('2d'),P=mkP(x);
+  P(0,0,W,54,'#4a2a1e');P(2,2,W-4,50,'#e8dfc4');
+  pcirc(x,14,10,5,'#d8322a');
+  for(const [px,ph,pw] of [[40,22,12],[62,30,14],[86,24,12],[110,18,10]])for(let k=0;k<ph;k++){const w=Math.round(pw*k/ph);P(px-w,40-ph+k,w*2+1,1,k%3?'#3f7a7a':'#2e6060')}
+  for(let i=4;i<W-4;i+=5){P(i,44,3,1,'#2f5fa8');P(i+1,46,3,1,'#5b97d6');P(i,48,2,1,'#2f5fa8')}
+  pell(x,30,8,7,2,'#ffffff');pell(x,98,6,9,2,'#ffffff');
+  P(122,14,3,28,'#a8432f');P(117,12,12,4,'#2f6e33');P(119,9,8,3,'#2f6e33');
+  P(26,36,3,3,'#a83a8a');P(25,35,5,1,'#c85aa8');P(72,38,3,3,'#a83a8a');
+  P(50,14,6,3,'#ffffff');P(54,12,2,2,'#1f1f22');P(55,11,1,1,'#d8322a');P(51,17,1,4,'#1f1f22');
+  P(96,34,7,4,'#a8743f');P(101,31,2,3,'#a8743f');P(97,38,1,3,'#7a4e2c');P(102,38,1,3,'#7a4e2c');P(102,29,1,2,'#7a4e2c');
+  pell(x,74,42,4,2,'#3f7a3a');P(78,42,2,1,'#8fae6a');
+  for(let k=1;k<8;k++)P(Math.round(k*W/8),2,1,50,'#7a4e2c');
+  P(6,54,3,6,'#4a2a1e');P(W-9,54,3,6,'#4a2a1e');
+  return outline(c);
+}
+function sprBulocho(){const c=mkCanvas(12,12),x=c.getContext('2d'),P=mkP(x);P(5,5,2,6,'#c9b48a');pell(x,6,4,5,3,'#a83a8a');P(3,3,6,1,'#c85aa8');return outline(c)}
+function sprGateDano(){ // 단오풍정 가는 길: 버드나무와 바위 사이 오솔길
+  const c=mkCanvas(80,64),x=c.getContext('2d'),P=mkP(x);
+  pell(x,14,48,14,14,'#8d8a85');pell(x,12,44,10,9,'#a6a39d');pell(x,66,48,14,14,'#8d8a85');pell(x,68,44,10,9,'#a6a39d');
+  P(56,6,4,34,'#6b4a2f');for(let i=0;i<14;i++){const sx=40+i*3;for(let y=6;y<26+(i%4)*5;y++)P(sx+Math.round(Math.sin(y*.2+i)),y,1,1,i%2?'#6fb257':'#4f9a3c')}
+  P(4,22,14,10,'#b98a52');P(10,32,2,10,'#6b4a2f');P(6,25,10,1,'#6b4a2f');P(6,28,7,1,'#6b4a2f');
+  return outline(c);
+}
+function sprGateSsireum(){ // 씨름판 가는 길: 새끼줄 울타리와 깃발
+  const c=mkCanvas(80,52),x=c.getContext('2d'),P=mkP(x);
+  for(const px of [4,20,58,74]){P(px,18,3,32,'#6b4a2f')}
+  for(const [a,b] of [[4,20],[58,74]])for(let i=a;i<b;i++)P(i,24+Math.round(Math.sin((i-a)/(b-a)*Math.PI)*3),1,1,'#c9a45a');
+  P(20,2,2,18,'#5a3a1e');P(22,2,12,8,'#c0392b');P(22,10,10,2,'#c0392b');P(58,2,2,18,'#5a3a1e');P(60,2,12,8,'#2f4b8f');P(60,10,10,2,'#2f4b8f');
+  return outline(c);
+}
+function sprWillow(){ // 그네를 매단 버드나무
+  const c=mkCanvas(70,80),x=c.getContext('2d'),P=mkP(x);
+  P(8,30,6,48,'#6b4a2f');P(8,30,2,48,'#56391f');P(10,26,40,4,'#6b4a2f');P(46,24,6,3,'#6b4a2f');
+  pell(x,24,18,22,14,'#4f9a3c');pell(x,40,14,22,11,'#5ea345');
+  for(let i=0;i<26;i++){const sx=4+i*2.4|0;for(let y=14;y<34+(i%5)*6;y++)P(sx+Math.round(Math.sin(y*.15+i)),y,1,1,i%2?'#6fb257':'#3f8f43')}
+  return outline(c);
+}
+function sprYeotTray(){const c=mkCanvas(18,10),x=c.getContext('2d'),P=mkP(x);P(1,4,16,4,'#8a6236');for(let i=3;i<15;i+=3)P(i,1,2,4,'#c98a3a');return outline(c)}
+function sprCrag(seed){ // 인왕산의 검은 바위
+  const r=mulberry32(seed),w=36+(r()*24|0),h=36+(r()*28|0),c=mkCanvas(w,h),x=c.getContext('2d'),P=mkP(x);
+  pell(x,w/2|0,h/2+2|0,w/2-2|0,h/2-3|0,'#3a3c40');pell(x,(w/2|0)-4,(h/2|0)-2,w/3|0,h/3|0,'#4a4d52');
+  for(let i=0;i<20;i++){const a=r()*w|0,b=r()*h|0;if(x.getImageData(a,b,1,1).data[3])P(a,b,1,3,'#5e6166')}
+  return outline(c,[20,20,22]);
+}
+function sprPeak(){const c=mkCanvas(44,40),x=c.getContext('2d'),P=mkP(x);pell(x,22,32,20,7,'#5e6166');pell(x,20,30,15,5,'#76797e');P(26,4,2,26,'#6b4a2f');P(28,4,12,8,'#c0392b');P(28,12,9,2,'#c0392b');return outline(c)}
+function sprChogaHouse(){ // 야묘도추: 초가집과 마루
+  const c=mkCanvas(112,84),x=c.getContext('2d'),P=mkP(x);
+  P(4,74,104,8,'#a9a39a');P(4,74,104,1,'#c6c0b6');
+  P(12,40,88,22,'#e8dcc0');for(const px of [12,40,70,96])P(px,36,4,38,'#6b4a2f');
+  lattice(P,18,44,18,16);lattice(P,76,44,18,16);P(44,42,24,20,'#8a5a32');
+  P(8,62,96,12,'#c9945a');for(let i=10;i<104;i+=6)P(i,62,1,12,'#a8743f');P(8,62,96,1,'#e0b07a');
+  for(let y=6;y<40;y++){const t=(y-6)/34,h=Math.round(36+t*20);P(56-h,y,h*2,1,y%3?'#c9a45a':'#b8924c')}
+  pell(x,56,10,38,8,'#d4b06a');for(let i=2;i<110;i+=3)P(i,36+((i*7)%3),1,4,'#a8843f');
+  P(84,66,10,2,'#5a3a1e');P(93,64,2,3,'#9a6a40');
+  return outline(c);
+}
+function sprHen(){const c=mkCanvas(18,16),x=c.getContext('2d'),P=mkP(x);pell(x,10,9,6,4,'#c98a3a');P(3,4,4,4,'#c98a3a');P(3,2,3,2,'#d8322a');P(2,6,1,1,'#f2c84b');P(4,5,1,1,'#1f1f22');P(15,5,2,4,'#7a4a1e');P(8,13,1,3,'#f2c84b');P(11,13,1,3,'#f2c84b');return outline(c)}
+
+/* ── 동물 그림: 옆모습 2장(서기·걷기) ── */
+function animalFrames(kind){
+  const mk=(w,h,fn)=>[0,1].map(f=>{const c=mkCanvas(w,h),x=c.getContext('2d');fn(mkP(x),x,f);return outline(c)});
+  const A={
+    rabbit:mk(18,16,(P,x,f)=>{const u=f?-2:0;pell(x,10,10+u,5,4,'#f4f2ee');pcirc(x,5,7+u,3,'#f4f2ee');P(4,0+u+2,2,5,'#f4f2ee');P(6,1+u+2,2,4,'#f4f2ee');P(5,3+u,1,3,'#f2b8c4');P(4,7+u,1,1,'#1f1f22');P(15,8+u,2,2,'#ffffff');P(2,8+u,1,1,'#f2a0a0');if(f){P(13,13+u,3,2,'#e3e0da')}else{P(7,13,2,2,'#e3e0da');P(12,13,3,2,'#e3e0da')}}),
+    dog:mk(22,18,(P,x,f)=>{P(6,7,12,6,'#d9a55a');P(2,4,6,6,'#d9a55a');P(1,7,2,2,'#c08a40');P(0,8,1,1,'#1f1f22');P(3,2,2,3,'#c08a40');P(6,2,2,3,'#c08a40');P(3,6,1,1,'#1f1f22');P(17,4,3,2,'#d9a55a');P(18,2,2,2,'#d9a55a');P(7,12,10,1,'#f0d9a8');
+      const a=f?1:0;P(7,13+a,2,4-a,'#c08a40');P(15,13+a,2,4-a,'#c08a40');P(10,13-a+1,2,3+a,'#c08a40');P(13,13-a+1,2,3+a,'#c08a40')}),
+    cat:mk(20,16,(P,x,f)=>{P(6,7,10,5,'#e8a24a');for(let i=7;i<16;i+=3)P(i,7,1,5,'#b86a2a');pcirc(x,4,6,3,'#e8a24a');P(2,1,2,3,'#e8a24a');P(5,1,2,3,'#e8a24a');P(3,6,1,1,'#2a5a2a');P(5,6,1,1,'#2a5a2a');P(4,8,1,1,'#f2a0a0');
+      P(16,3,2,6,'#e8a24a');P(17,1,2,3,'#b86a2a');const a=f?1:0;P(7,12+a,2,3-a,'#e8a24a');P(13,12+a,2,3-a,'#e8a24a');P(10,12,2,3,'#c98a3a')}),
+    blackcat:mk(22,16,(P,x,f)=>{P(6,7,10,5,'#2a2628');pcirc(x,4,6,3,'#2a2628');P(2,1,2,3,'#2a2628');P(5,1,2,3,'#2a2628');P(3,6,1,1,'#f2c84b');P(5,6,1,1,'#f2c84b');P(16,3,2,6,'#2a2628');P(17,1,2,3,'#3a3638');
+      pell(x,1,9,2,2,'#f2d84b');P(0,8,1,1,'#f29a3a');const a=f?1:0;P(7,12+a,2,3-a,'#2a2628');P(13,12+a,2,3-a,'#2a2628');P(10,12,2,3,'#3a3638')}),
+    chick:mk(12,12,(P,x,f)=>{const u=f?-1:0;pell(x,6,7+u,4,3,'#f6d84a');pcirc(x,3,4+u,2,'#f6d84a');P(0,4+u,2,1,'#f29a3a');P(2,3+u,1,1,'#1f1f22');P(8,6+u,2,2,'#e8c03a');P(4,10,1,2,'#f29a3a');P(7,10,1,2,'#f29a3a')}),
+    deer:mk(24,26,(P,x,f)=>{P(6,12,12,6,'#a8743f');for(const [a,b] of [[8,13],[12,14],[15,13]])P(a,b,1,1,'#f0e0c0');P(3,7,4,7,'#a8743f');P(1,5,5,4,'#a8743f');P(1,7,1,1,'#1f1f22');P(2,0,1,5,'#7a5a3a');P(4,0,1,5,'#7a5a3a');P(1,1,1,1,'#7a5a3a');P(5,1,1,1,'#7a5a3a');
+      const a=f?1:0;P(7,18,1,7-a,'#8a5a32');P(9,18,1,7,'#8a5a32');P(15,18,1,7,'#8a5a32');P(17,18,1,7-a,'#8a5a32');P(18,11,2,2,'#f0e0c0')}),
+    crane:mk(20,28,(P,x,f)=>{pell(x,10,13,6,4,'#f8f6f0');P(14,12,4,4,'#1f1f22');P(5,2,2,10,'#f8f6f0');P(5,2,2,2,'#1f1f22');P(4,0,3,2,'#d8322a');P(2,3,3,1,'#c9b48a');P(5,5,2,4,'#1f1f22');P(9,17,1,10,'#3a3a40');P(12,17,1,f?8:10,'#3a3a40')}),
+    turtle:mk(24,14,(P,x,f)=>{pell(x,12,7,8,5,'#5a7a3a');for(const [a,b] of [[9,5],[13,4],[16,7],[11,8]])P(a,b,2,1,'#3f5a28');P(4,4+(f?1:0),4,3,'#8fae6a');P(4,5,1,1,'#1f1f22');P(7,11,3,2,'#8fae6a');P(15,11,3,2,'#8fae6a');P(20,8,2,1,'#8fae6a');pell(x,12,6,6,2,'#6f8f4a')}),
+  };
+  const fr=A[kind];
+  const mir=fr.map(c=>{const m=mkCanvas(c.width,c.height),x=m.getContext('2d');x.translate(c.width,0);x.scale(-1,1);x.drawImage(c,0,0);return m});
+  return {left:fr,right:mir,down:fr,up:mir};
+}
+const ANIMAL_NAME={rabbit:'토끼',dog:'강아지',cat:'고양이',chick:'병아리',blackcat:'검은 고양이',deer:'사슴',crane:'학',turtle:'거북'};
+const sheetCache={};function animalSheet(k){return sheetCache[k]||(sheetCache[k]=animalFrames(k))}
+function sprSungnyemun(){ // 숭례문: 돌로 쌓은 육축과 홍예문, 2층 문루, 우진각 지붕
+  const W=176,H=150,c=mkCanvas(W,H),x=c.getContext('2d'),P=mkP(x);
+  P(8,96,160,52,'#b5ada0');for(let y=98;y<148;y+=6)for(let i=8+((y/6|0)%2)*8;i<168;i+=16)P(i,y,1,6,'#958d80');for(let y=96;y<148;y+=6)P(8,y,160,1,'#9a9284');
+  P(8,96,160,2,'#cfc8bb');
+  P(72,112,32,36,'#2a2420');pcirc(x,88,114,16,'#2a2420');P(72,114,32,34,'#2a2420');P(76,118,24,30,'#3a3430');
+  for(let k=0;k<5;k++)P(70+k*0,110-k,36,1,'#cfc8bb');
+  // 1층 문루
+  P(24,72,128,24,'#efe7d4');for(let i=0;i<7;i++){P(24+i*21,70,4,26,'#a8432f')}for(let i=0;i<6;i++)lattice(P,30+i*21,74,13,18);
+  for(let i=22;i<154;i+=6){P(i,64,4,3,'#2e8b6a');P(i+1,67,2,3,'#2f5fa8')}
+  giwaRoof(P,{cx:88,y0:52,y1:66,top:74,bot:84,curve:1.2,lift:6,ridge:72,base:'#4a5463',line:'#5f6b7c',edge:'#384252',eave:'#2c3442'});
+  // 2층 문루
+  P(40,36,96,18,'#efe7d4');for(let i=0;i<5;i++)P(40+i*23,34,3,20,'#a8432f');for(let i=0;i<4;i++)lattice(P,46+i*23,38,12,12);
+  P(76,36,24,7,'#1f3354');P(76,36,24,1,'#f2c84b');for(const tx of [79,86,93])P(tx,38,3,4,'#f2c84b');
+  for(let i=38;i<138;i+=6){P(i,29,4,3,'#2e8b6a');P(i+1,32,2,2,'#2f5fa8')}
+  giwaRoof(P,{cx:88,y0:12,y1:30,top:44,bot:66,curve:1.5,lift:9,ridge:44,base:'#4a5463',line:'#5f6b7c',edge:'#384252',eave:'#2c3442'});
+  return outline(c);
+}
+function sprCityWall(){const c=mkCanvas(80,44),x=c.getContext('2d'),P=mkP(x);
+  P(0,14,80,30,'#b5ada0');for(let y=16;y<44;y+=6)for(let i=((y/6|0)%2)*6;i<80;i+=12)P(i,y,1,6,'#958d80');for(let y=14;y<44;y+=6)P(0,y,80,1,'#9a9284');
+  for(let i=0;i<80;i+=10){P(i,4,8,10,'#c2baad');P(i+3,8,2,3,'#3a3430')}P(0,4,80,1,'#d6cfc2');return outline(c)}
+
 /* ════════════════════════════════════════════════
-   6. 마을 만들기
+   6. 세계: 여러 장의 지도 (초기 → 중기 → 후기, 그리고 들어갈 수 있는 곳)
    ════════════════════════════════════════════════ */
-const ground = Array.from({length:MH},()=>Array(MW).fill('G'));
-const solid  = Array.from({length:MH},()=>Array(MW).fill(false));
-const objects = []; // {spr, x, y(바닥 기준 픽셀), w, h, label?, info?}
-const at=(x,y)=> (x<0||y<0||x>=MW||y>=MH)?'G':ground[y][x];
+let ground=[], solid=[], objects=[], PLACES=[], NPCS=[], ANIMALS=[], PORTALS=[], GROUPS=[], MAP=null;
+const at=(x,y)=> (x<0||y<0||x>=MW||y>=MH)?'K':ground[y][x];
 function fillRect(k,x0,y0,x1,y1){for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(y>=0&&x>=0&&y<MH&&x<MW)ground[y][x]=k}
 function block(x0,y0,x1,y1){for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(y>=0&&x>=0&&y<MH&&x<MW)solid[y][x]=true}
-// 물체를 놓는다: 타일 (tx,ty) 의 아래쪽 가운데가 바닥 기준
-function place(spr, tx, ty, opt={}){
-  const o={spr,x:tx*T+T/2,y:(ty+1)*T,...opt};objects.push(o);return o;
+function place(spr, tx, ty, opt={}){const o={spr,x:tx*T+T/2,y:(ty+1)*T,...opt};objects.push(o);return o}
+// 자연스러운 모양을 만드는 잡음
+function hash2(x,y,s){let h=(x*374761393+y*668265263+s*1442695041)|0;h=Math.imul(h^(h>>>13),1274126177);return ((h^(h>>>16))>>>0)/4294967296}
+function vnoise(x,y,s=0){const xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi,sm=t=>t*t*(3-2*t);
+  const a=hash2(xi,yi,s),b=hash2(xi+1,yi,s),c=hash2(xi,yi+1,s),d=hash2(xi+1,yi+1,s),u=sm(xf),v=sm(yf);return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v}
+function blob(k,cx,cy,rx,ry,jag=.3,seed=1,keep){
+  for(let y=Math.floor(cy-ry*1.5);y<=Math.ceil(cy+ry*1.5);y++)for(let x=Math.floor(cx-rx*1.5);x<=Math.ceil(cx+rx*1.5);x++){
+    if(x<0||y<0||x>=MW||y>=MH)continue;
+    const dx=(x+.5-cx)/rx, dy=(y+.5-cy)/ry, a=Math.atan2(dy,dx);
+    const rr=1+jag*(vnoise(Math.cos(a)*1.6+seed*3.7,Math.sin(a)*1.6+seed*1.3,seed)-.5)*2;
+    if(dx*dx+dy*dy<=rr*rr&&(!keep||!keep.includes(ground[y][x])))ground[y][x]=k;
+  }
 }
+function curve(pts,fn,step=.25){
+  const Q=[pts[0],...pts,pts[pts.length-1]];
+  for(let i=1;i<Q.length-2;i++){const p0=Q[i-1],p1=Q[i],p2=Q[i+1],p3=Q[i+2];
+    const n=Math.max(2,Math.ceil(Math.hypot(p2[0]-p1[0],p2[1]-p1[1])/step));
+    for(let j=0;j<n;j++){const t=j/n,t2=t*t,t3=t2*t,f=(a,b,c,d)=>.5*(2*b+(-a+c)*t+(2*a-5*b+4*c-d)*t2+(-a+3*b-3*c+d)*t3);
+      fn(f(p0[0],p1[0],p2[0],p3[0]),f(p0[1],p1[1],p2[1],p3[1]))}}
+  fn(pts[pts.length-1][0],pts[pts.length-1][1]);
+}
+function disk(k,cx,cy,r,keep){for(let y=Math.floor(cy-r-1);y<=Math.ceil(cy+r);y++)for(let x=Math.floor(cx-r-1);x<=Math.ceil(cx+r);x++){
+  if(x<0||y<0||x>=MW||y>=MH)continue;if((x+.5-cx)**2+(y+.5-cy)**2>r*r)continue;
+  const g=ground[y][x];if(keep&&keep.includes(g))continue;ground[y][x]=(k==='P'&&(g==='W'||g==='B'))?'B':k}}
+function road(pts,w=1.3,k='P'){curve(pts,(x,y)=>disk(k,x,y,w+(vnoise(x*.3,y*.3,9)-.5)*.5,['S','J','B']))}
+function river(pts,w=1.5){curve(pts,(x,y)=>disk('W',x,y,w+(vnoise(x*.25,y*.25,4)-.5)*.9,['B']))}
+function flowers(seed,th=.7){for(let y=0;y<MH;y++)for(let x=0;x<MW;x++)if(ground[y][x]==='G'&&vnoise(x*.22,y*.22,seed)>th&&hash2(x,y,seed)>.35)ground[y][x]='F'}
+function waterSolid(){for(let y=0;y<MH;y++)for(let x=0;x<MW;x++)if(ground[y][x]==='W')solid[y][x]=true}
+// 가장자리 숲: 잡음으로 들쭉날쭉하게
+function forest(kinds,seed=5,depth=3.4){
+  const tree=Array.from({length:MH},()=>Array(MW).fill(false)), soft=['G','F','M','R','D'];
+  for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){
+    const d=Math.min(x,y,MW-1-x,MH-1-y), t=1.4+depth*vnoise(x*.13,y*.13,seed);
+    if(d<t&&soft.includes(ground[y][x])&&!solid[y][x]){ground[y][x]='K';solid[y][x]=true}
+  }
+  for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){
+    if(ground[y][x]!=='K'||!solid[y][x])continue;
+    if(hash2(x,y,seed+1)<.62&&!(x>0&&tree[y][x-1])&&!(y>0&&tree[y-1][x])){tree[y][x]=true;
+      const k=kinds[Math.floor(hash2(x,y,seed+2)*kinds.length)];
+      place(k==='bamboo'?bambooSpr(x+y):treeSpr(k,x*7+y),x,y,{x:x*T+8+Math.round((hash2(x,y,seed+3)-.5)*6)})}
+  }
+  for(let x=0;x<MW;x++)for(const y of [0,MH-1])if(!['P','B'].includes(ground[y][x]))solid[y][x]=true;
+  for(let y=0;y<MH;y++)for(const x of [0,MW-1])if(!['P','B'].includes(ground[y][x]))solid[y][x]=true;
+}
+const bambooCache={};function bambooSpr(s){const k=s%4;return bambooCache[k]||(bambooCache[k]=sprBamboo(k*17+3))}
+// 빈 풀밭에 나무·덤불·바위를 흩뿌린다
+function scatter(n,makers,seed=3,okKinds=['G','F']){
+  const r=mulberry32(seed);
+  for(let i=0;i<n*4&&n>0;i++){
+    const x=3+(r()*(MW-6)|0), y=3+(r()*(MH-6)|0);
+    if(!okKinds.includes(ground[y][x])||solid[y][x])continue;
+    let near=false;for(let yy=y-2;yy<=y+2&&!near;yy++)for(let xx=x-2;xx<=x+2;xx++){const g=at(xx,yy);if(g==='P'||g==='S'||g==='B'||g==='J'||(solid[yy]&&solid[yy][xx])){near=true;break}}
+    if(near)continue;
+    const mk=makers[Math.floor(r()*makers.length)];place(mk(i),x,y);solid[y][x]=true;n--;
+  }
+}
+function scatterAnimals(kinds,n,seed){
+  const r=mulberry32(seed);
+  for(let i=0;i<n*8&&n>0;i++){const x=4+(r()*(MW-8)|0),y=4+(r()*(MH-8)|0);
+    if(!['G','F','M'].includes(ground[y][x])||solid[y][x])continue;
+    addAnimal(kinds[n%kinds.length],x,y);n--}
+}
+function addAnimal(kind,tx,ty,opt={}){const a={kind,x:tx*T+8,y:ty*T+12,dir:'left',t:Math.random()*3,mv:[0,0],walk:0,sheet:animalSheet(kind),catchable:['rabbit','dog','cat'].includes(kind),...opt};ANIMALS.push(a);return a}
+// 사람(NPC)
+const LK=o=>({skin:'#efc29c',hair:'topknot',hairColor:'#2a2220',hat:'none',outfit:'baji',top:'#ece6d6',bottom:'#ece6d6',...o});
+function mkNPC(o){const n={dir:'down',walk:0,ph:Math.random()*7,...o};n.sheet=n.animal?animalSheet(n.animal):buildSheet(n.look);NPCS.push(n);return n}
+function portal(x0,y0,x1,y1,to,tx,ty,dir){PORTALS.push({x0,y0,x1,y1,to,tx,ty,dir})}
 
-const PLACES = []; // 살펴볼 수 있는 곳: {x0,y0,x1,y1(타일), who, lines}
 const LOCK='🔒 전시실 안은 아직 준비 중이에요. 곧 문이 열립니다!';
 const INFO = {
   early:{who:'조선 초기 전시실',lines:[
     '조선 초기(15~16세기)에는 새 나라의 기틀을 다지며 단정하고 품위 있는 미술이 발달했어요.',
     '벽에 걸린 긴 두루마리를 보세요. 안견의 「몽유도원도」(1447)는 안평대군이 꿈에서 본 복숭아꽃 마을, 도원을 그린 그림이에요.',
-    '공예에서는 회색 흙그릇에 흰 흙을 발라 자유롭게 꾸민 분청사기가 널리 쓰였고, 깨끗한 백자도 만들어지기 시작했어요.',
-    LOCK]},
+    '공예에서는 회색 흙그릇에 흰 흙을 발라 자유롭게 꾸민 분청사기가 널리 쓰였고, 깨끗한 백자도 만들어지기 시작했어요.',LOCK]},
   middle:{who:'조선 중기 전시실',lines:[
     '조선 중기(16세기 후반~17세기)에는 임진왜란과 병자호란을 겪은 뒤, 먹의 진하고 옅음을 살린 수묵화가 사랑받았어요.',
     '선비들은 사군자를 즐겨 그렸어요. 이정의 대나무(묵죽), 어몽룡의 매화(묵매)가 유명하고, 김명국은 거침없는 붓질로 「달마도」를 그렸어요.',
-    '전쟁 뒤 푸른 안료가 귀해지자, 철 성분 안료로 갈색 무늬를 그린 철화백자가 많이 만들어졌어요.',
-    LOCK]},
+    '전쟁 뒤 푸른 안료가 귀해지자, 철 성분 안료로 갈색 무늬를 그린 철화백자가 많이 만들어졌어요.',LOCK]},
   late:{who:'조선 후기 전시실',lines:[
     '조선 후기(18~19세기)에는 우리 땅과 우리 사람들의 모습을 그리는 새로운 그림이 꽃피었어요.',
     '정선은 「인왕제색도」처럼 실제 우리 산천을 보고 그리는 진경산수화를 완성했어요. 김홍도와 신윤복은 생활 모습을 그린 풍속화로 유명해요.',
-    '백성들은 호랑이와 까치를 그린 호작도 같은 민화로 집을 꾸몄고, 공예에서는 푸른 무늬의 청화백자와 둥근 달항아리가 사랑받았어요.',
-    LOCK]},
+    '백성들은 호랑이와 까치를 그린 호작도 같은 민화로 집을 꾸몄고, 공예에서는 푸른 무늬의 청화백자와 둥근 달항아리가 사랑받았어요.',LOCK]},
   kyujang:{who:'규장각 (주합루)',lines:[
     '정조가 왕위에 오른 해(1776)에 창덕궁 후원에 세운 왕실 도서관이자 학문 연구 기관이에요.',
     '아래층은 책을 보관한 규장각, 위층은 주합루라고 불렀어요. 정조는 이곳에서 젊은 학자들과 함께 공부하며 조선 후기 문화를 이끌었어요.',
     '🔒 안으로는 아직 들어갈 수 없어요.']},
-  buyongji:{who:'부용지',lines:[
-    '규장각 앞 연못 부용지는 네모난 연못 가운데에 둥근 섬이 떠 있어요.',
-    '"하늘은 둥글고 땅은 네모나다(천원지방)"는 옛사람들의 생각을 담은 모양이랍니다.']},
+  buyongji:{who:'부용지',lines:['규장각 앞 연못 부용지는 네모난 연못 가운데에 둥근 섬이 떠 있어요.','"하늘은 둥글고 땅은 네모나다(천원지방)"는 옛사람들의 생각을 담은 모양이랍니다.']},
   wongaksa:{who:'원각사지 십층석탑',lines:[
     '세조 때인 1467년에 세운 조선 초기의 대표적인 석탑이에요. 지금은 서울 탑골공원에 있어요.',
     '흔한 화강암이 아니라 흰 대리석으로 만들었고, 탑의 돌마다 부처와 보살, 용, 연꽃 같은 무늬가 화려하게 새겨져 있어요.',
@@ -971,77 +1346,323 @@ const INFO = {
     '충북 보은 법주사에 있는 팔상전은 우리나라에 하나뿐인 5층 목탑이에요.',
     '임진왜란 때 불탄 뒤 다시 지어 1626년에 완성했어요. 조선 중기의 건축 솜씨를 보여 주지요.',
     '석가모니의 일생을 여덟 장면으로 그린 팔상도를 안에 모셔서 \'팔상전\'이라고 불러요.']},
-  welcome:{who:'마을 안내판',lines:[
-    '★ 한국미술사 마을 ★\n위쪽: 조선 초기 전시실 · 규장각\n아래쪽: 조선 중기 전시실 · 조선 후기 전시실',
-    '시대 순서대로 초기 → 중기 → 후기 전시실을 돌아보고, 규장각도 찾아가 보세요!']},
+  welcome:{who:'마을 안내판',lines:['★ 조선 초기 · 한양 ★\n위쪽: 몽유도원 가는 길 · 고사관수도\n아래쪽: 분청사기 가마\n오른쪽: 숭례문 옆길 → 조선 중기','시대를 따라 오른쪽으로 걸어가면 중기, 후기 마을이 이어져요!']},
   desk:{who:'화원의 서안',lines:['낮은 책상 위에 화선지와 벼루, 붓이 놓여 있어요.\n누군가 먹으로 산수화를 그리다 만 것 같아요. 옆에 물감 접시도 있네요!']},
+  sungnyemun:{who:'숭례문',lines:['숭례문은 한양 도성의 남쪽 큰 문이에요. 태조 때인 1398년에 완성되었어요.','돌로 쌓은 육축 가운데에 무지개 모양 문(홍예문)을 내고, 그 위에 2층 문루를 올렸어요.','문 옆으로 난 길을 따라 오른쪽으로 가면 조선 중기 마을이 나와요!']},
+  dowon_gate:{who:'몽유도원 가는 길',lines:[
+    '1447년, 안평대군은 꿈에서 복숭아꽃이 핀 신비로운 마을(도원)을 거닐었어요. 안견은 그 이야기를 듣고 사흘 만에 「몽유도원도」를 그렸어요.',
+    '그림은 왼쪽 아래 현실 세계에서 시작해 오른쪽 위 도원으로 이어져요. 이 길도 기이한 바위산 사이를 지나 도원으로 이어진답니다.']},
+  dowon:{who:'도원',lines:['여기가 꿈속의 도원이에요! 복숭아꽃이 가득하고, 사람 하나 없이 고요해요.','안평대군이 꿈에서 본 이상향, 「몽유도원도」의 오른쪽 끝 장면이에요. 복숭아 하나를 챙겨 가요!']},
+  gosa:{who:'고사관수도',lines:[
+    '강희안(1417~1464)의 「고사관수도」예요. 덩굴이 늘어진 절벽 아래, 선비가 바위에 엎드리듯 기대어 물을 바라보고 있어요.',
+    '물을 바라보며 마음을 맑게 하는 선비의 모습에서 자연과 하나가 되려는 마음을 느낄 수 있어요.']},
+  seowon:{who:'서원',lines:[
+    '조선 중기 선비들은 서원에서 성리학을 공부하며 마음을 바르게 닦으려 했어요. 이황과 이이가 이 시기의 큰 학자예요.',
+    '그림에서도 직업 화가처럼 꼼꼼히 그리기보다, 먹과 옅은 색(수묵 담채)으로 마음속 뜻을 담는 문인화를 귀하게 여겼어요.',
+    '이런 문인화의 정신은 남종화로 이어져 조선 후기에 크게 유행했답니다.']},
+  dano:{who:'신윤복 「단오풍정」',lines:['신윤복(1758~?)이 단옷날 냇가 풍경을 그린 그림이에요. 『혜원전신첩』에 들어 있어요.','여인들은 창포물에 머리를 감고 그네를 뛰며, 바위 뒤에서는 두 동자승이 몰래 엿보고 있어요. 산뜻한 색과 섬세한 선이 돋보여요.']},
+  ssireum:{who:'김홍도 「씨름」',lines:['김홍도의 『단원 풍속도첩』에 실린 그림이에요. 씨름하는 두 사람을 구경꾼들이 둥글게 둘러싸고 있어요.','둥근 구도 덕분에 시선이 가운데로 모이지요. 한쪽에는 엿을 파는 아이도 있어요. 구경꾼 한 사람의 손이 좌우 바뀌어 그려졌다는 재미있는 이야기도 전해져요.']},
+  geunjeong:{who:'경복궁 근정전',lines:['근정전은 경복궁의 으뜸 건물로, 임금이 신하들의 조회를 받고 나라의 큰 행사를 치르던 곳이에요.','지금 건물은 1867년에 다시 지었어요. 두 단의 월대 위에 2층 지붕을 올려 웅장하고, 마당의 품계석을 따라 신하들이 벼슬 순서대로 섰어요.','임금의 자리 뒤에는 해와 달, 다섯 봉우리를 그린 「일월오봉도」 병풍을 둘렀어요.']},
+  sipjang:{who:'십장생도',lines:['십장생은 오래 산다고 믿은 열 가지예요. 해, 산, 물, 돌, 구름, 소나무, 불로초, 거북, 학, 사슴이지요.','사람들은 오래오래 건강하게 살기를 바라며 십장생을 그린 민화 병풍을 집에 두었어요.']},
+  inwang_trail:{who:'인왕산 오르는 길',lines:['인왕산으로 올라가는 길이에요. 꼭대기까지 올라가 볼까요?']},
+  peak:{who:'인왕산 꼭대기',lines:['인왕산 꼭대기예요!']},
+  yamyo:{who:'김득신 「야묘도추」',lines:['김득신(1754~1822)의 「야묘도추」예요. 들고양이가 병아리를 물고 달아나는 한순간을 그렸어요.','어미 닭은 날개를 퍼덕이며 쫓아가고, 주인 영감은 담뱃대를 휘두르다 마루에서 굴러떨어지고, 아내도 놀라 뛰어나오지요.']},
 };
 
-
-function buildVillage(){
-  // 길
-  fillRect('P',27,3,28,41);   // 남북 큰길
-  fillRect('P',3,21,52,22);   // 동서 큰길
-  fillRect('S',21,17,34,26);  // 광장
-  fillRect('P',11,12,12,20);  // 초기 전시실 가는 길
-  fillRect('P',8,37,47,38);   // 남쪽 길 (중기·후기 전시실 문이 남쪽을 봄)
-  fillRect('P',37,10,38,20);  // 규장각 가는 길
-  fillRect('S',37,10,48,11);  // 규장각 앞 돌마당
-  // 부용지: 네모난 연못
-  fillRect('W',39,12,48,17);
-  for(let y=0;y<MH;y++)for(let x=0;x<MW;x++)if(ground[y][x]==='W')solid[y][x]=true;
-  // 꽃밭
-  const r=mulberry32(42);
-  for(let i=0;i<70;i++){const x=2+r()*52|0,y=2+r()*40|0;if(ground[y][x]==='G')ground[y][x]='F'}
-  fillRect('F',22,14,25,15);fillRect('F',30,14,33,15);fillRect('F',30,28,33,29);fillRect('F',22,28,25,29);
-
-  // 전시실
-  place(sprHallEarly(),12,10,{x:12*T,label:'조선 초기 전시실'});block(8,6,15,10);
-  place(sprHallMiddle(),12,34,{x:12*T,label:'조선 중기 전시실'});block(8,30,15,34);
-  place(sprHallLate(),44,34,{x:44*T,label:'조선 후기 전시실'});block(40,30,47,34);
-  PLACES.push({x0:10,y0:10,x1:13,y1:12,key:'early'},{x0:10,y0:34,x1:13,y1:36,key:'middle'},{x0:42,y0:34,x1:45,y1:36,key:'late'});
-  fillRect('P',11,35,12,36);fillRect('P',43,35,44,36);
-  // 규장각(주합루)과 부용지
-  place(sprKyujanggak(),44,9,{x:44*T,label:'규장각 (주합루)'});block(40,3,47,9);
-  PLACES.push({x0:40,y0:9,x1:47,y1:10,key:'kyujang'},{x0:39,y0:12,x1:48,y1:17,key:'buyongji'});
-  place(sprIsland(),43,15,{x:44*T,label:'부용지'});
-  for(const [px,py] of [[36,8],[49,9],[36,15],[49,16]]){place(sprTree(px*7+py,'pine'),px,py);block(px,py,px,py)}
-
-  // 시대별 소품: 자기와 나무
-  for(const [k,px,py] of [['buncheong',9,12],['buncheong',14,12],['cheolhwa',9,36],['cheolhwa',14,36],['cheonghwa',41,36],['moon',46,36]]){place(sprJar(k),px,py);block(px,py,px,py)}
-  for(const [px,py] of [[5,7],[18,7],[5,12],[18,12]]){place(sprTree(px*31+py,'peach'),px,py);block(px,py,px,py)}
-  for(const [px,py] of [[6,33],[17,32],[6,29]]){place(sprTree(px*31+py,'plum'),px,py);block(px,py,px,py)}
-  for(const [px,py] of [[4,31],[4,36],[18,36],[19,29]]){place(sprBamboo(px*5+py),px,py);block(px,py,px,py)}
-  for(const [px,py] of [[38,29],[50,30],[38,36],[50,36]]){place(sprTree(px*13+py,'pine'),px,py);block(px,py,px,py)}
-
-  // 광장: 석탑, 등불, 안내판, 화원의 서안
-  place(sprWongaksa(),23,20,{x:24*T,label:'원각사지 십층석탑'});block(23,19,24,20);
-  place(sprPalsangjeon(),31,20,{x:32*T,label:'법주사 팔상전'});block(31,19,32,20);
-  PLACES.push({x0:22,y0:18,x1:25,y1:21,key:'wongaksa'},{x0:30,y0:18,x1:33,y1:21,key:'palsangjeon'});
-  towerSite=place(sprTowerSite(),27,20,{x:28*T,label:'짓다 만 탑'});block(27,19,28,20);
-  PLACES.push({x0:27,y0:19,x1:28,y1:21,key:'tower'});
-  for(const [lx,ly] of [[21,17],[34,17],[21,26],[34,26]]){place(sprLamp(),lx,ly);block(lx,ly,lx,ly)}
-  place(sprSign(),25,25);block(25,25,25,25);PLACES.push({x0:25,y0:25,x1:25,y1:25,key:'welcome'});
-  place(sprDesk(),32,24);block(32,24,32,24);PLACES.push({x0:32,y0:24,x1:32,y1:24,key:'desk'});
-
-  // 가장자리 숲
-  let seed=1;
-  const tree=(tx,ty)=>{
-    if(tx<0||ty<0||tx>=MW||ty>=MH||solid[ty][tx])return;
-    const g=ground[ty][tx];if(g!=='G'&&g!=='F')return;
-    place(sprTree(seed++*97,r()<.3?'pine':'round'),tx,ty,{x:tx*T+T/2+((r()*6|0)-3)});solid[ty][tx]=true;
-  };
-  for(let x=0;x<MW;x++){tree(x,0);tree(x,1);if(r()<.6)tree(x,2);tree(x,MH-1);tree(x,MH-2);if(r()<.5)tree(x,MH-3)}
-  for(let y=0;y<MH;y++){tree(0,y);tree(1,y);if(r()<.6)tree(2,y);tree(MW-1,y);tree(MW-2,y);if(r()<.5)tree(MW-3,y)}
-  // 바깥 끝은 무조건 막는다
-  for(let x=0;x<MW;x++){solid[0][x]=solid[MH-1][x]=true}for(let y=0;y<MH;y++){solid[y][0]=solid[y][MW-1]=true}
-  // 흩어진 나무·덤불·바위
-  for(let i=0;i<40;i++){const x=4+r()*48|0,y=4+r()*36|0;
-    if(Math.abs(x-27.5)<9&&Math.abs(y-21.5)<8)continue; // 광장 근처는 비움
-    let near=false;for(const o of objects){if(Math.abs(o.x-(x*T+8))<40&&Math.abs(o.y-(y*T+16))<40){near=true;break}}if(near)continue;
-    if(ground[y][x]!=='G'&&ground[y][x]!=='F')continue;
-    const k=r();if(k<.5)tree(x,y);else if(k<.8){place(sprBush(i*13),x,y);solid[y][x]=true}else{place(sprRock(i),x,y);solid[y][x]=true}
+/* ── 지도 목록 ── */
+const MAPS={
+  early:{name:'조선 초기 · 한양',W:64,H:48,bg:'#1d3b22',build:buildEarly,waterKey:null},
+  middle:{name:'조선 중기 · 선비의 마을',W:64,H:48,bg:'#1d3b22',build:buildMiddle,waterKey:null},
+  late:{name:'조선 후기 · 진경과 풍속',W:78,H:56,bg:'#1d3b22',build:buildLate,waterKey:'buyongji'},
+  inwang:{name:'인왕산',W:30,H:44,bg:'#202226',build:buildInwang,waterKey:null},
+  dano:{name:'단오풍정',W:40,H:28,bg:'#1d3b22',build:buildDano,waterKey:'dano'},
+  ssireum:{name:'씨름판',W:30,H:24,bg:'#1d3b22',build:buildSsireum,waterKey:null},
+};
+function useMap(m){MAP=m;MW=m.W;MH=m.H;ground=m.ground;solid=m.solid;objects=m.objects;PLACES=m.places;NPCS=m.npcs;ANIMALS=m.animals;PORTALS=m.portals;GROUPS=m.groups;groundCanvas=m.groundCanvas;miniBase=m.miniBase}
+function getMap(id){
+  const m=MAPS[id];m.id=id;
+  if(!m.built){
+    m.ground=Array.from({length:m.H},()=>Array(m.W).fill('G'));m.solid=Array.from({length:m.H},()=>Array(m.W).fill(false));
+    m.objects=[];m.places=[];m.npcs=[];m.animals=[];m.portals=[];m.groups=[];
+    useMap(m);m.build(m);buildGround();m.groundCanvas=groundCanvas;m.miniBase=miniBase;m.built=true;
   }
+  return m;
+}
+
+/* ── 조선 초기 · 한양 ── */
+function buildEarly(m){
+  blob('M',47,10,17,7.5,.35,2);                          // 꿈결 같은 몽유도원 땅
+  river([[64,11],[57,13],[51,15],[46,17],[43,20],[40,21]],1.2);
+  blob('W',38.5,22,3.4,2.3,.3,6);                        // 고사관수도 앞 물
+  blob('S',22,27,7.5,5,.18,3);                           // 광장
+  road([[22,28],[31,28.5],[40,27.5],[48,28.6],[56,28],[64,28]],1.5);
+  road([[19,25],[15,21],[12,19]],1.2);
+  road([[31,28],[33,23],[32,18],[36,14],[43,11],[50,9],[55,8.5]],1.0);
+  road([[22,31],[21,35],[18,39],[16,41]],1.3);
+  blob('D',17,42,9,3.4,.22,8);
+  blob('M',56,8,5.5,3.6,.25,12);
+  flowers(11);waterSolid();
+  // 전시실
+  place(sprHallEarly(),12,18,{x:12*T,label:'조선 초기 전시실',mm:[8,14,8,5]});block(8,14,15,18);
+  PLACES.push({x0:10,y0:18,x1:13,y1:20,key:'early'});
+  for(const [px,py] of [[9,20],[14,20]]){place(sprJar('buncheong'),px,py);block(px,py,px,py)}
+  // 광장
+  place(sprWongaksa(),18,25,{x:18*T+8,label:'원각사지 십층석탑'});block(17,24,19,25);
+  PLACES.push({x0:17,y0:24,x1:19,y1:26,key:'wongaksa',any:true});
+  towerSite=place(sprTowerSite(),26,25,{x:26*T+8,label:'짓다 만 탑'});block(25,24,27,25);
+  PLACES.push({x0:25,y0:24,x1:27,y1:26,key:'tower',any:true});
+  for(const [lx,ly] of [[16,23],[28,23],[16,31],[28,31]]){place(sprLamp(),lx,ly);block(lx,ly,lx,ly)}
+  place(sprSign(),19,30);block(19,30,19,30);PLACES.push({x0:19,y0:30,x1:19,y1:30,key:'welcome',any:true});
+  place(sprDesk(),25,30);block(25,30,25,30);PLACES.push({x0:25,y0:30,x1:25,y1:30,key:'desk',any:true});
+  mkNPC(Object.assign(npc,{x:22*T+8,y:29*T+12,dir:'down'}));
+  // 숭례문과 성곽
+  place(sprSungnyemun(),55,25,{x:55*T+8,label:'숭례문',mm:[50,20,11,6]});block(50,21,60,25);
+  place(sprCityWall(),47,25,{x:47*T+8});block(45,24,49,25);
+  PLACES.push({x0:52,y0:26,x1:58,y1:26,key:'sungnyemun'});
+  portal(63,26,63,30,'middle',1.6,28,'right');
+  // 몽유도원 가는 길
+  place(sprSign(),33,25);block(33,25,33,25);PLACES.push({x0:33,y0:25,x1:33,y1:25,key:'dowon_gate',any:true});
+  const rr=mulberry32(9);let cnt=0;
+  for(let i=0;i<400&&cnt<20;i++){const x=32+(rr()*30|0),y=4+(rr()*12|0);
+    if(ground[y][x]!=='M'||solid[y][x])continue;let near=false;
+    for(let yy=y-2;yy<=y+1;yy++)for(let xx=x-2;xx<=x+2;xx++)if(at(xx,yy)==='P'||at(xx,yy)==='W'||(solid[yy]&&solid[yy][xx]))near=true;
+    if(near)continue;place(sprDreamRock(i*7+1),x,y);block(x-1,y,x+1,y);cnt++}
+  for(const [px,py] of [[52,6],[55,5],[59,6],[60,9],[52,11],[58,11],[61,7.5]]){place(treeSpr('peach',px*3+py),px,py|0);block(px,py|0,px,py|0)}
+  PLACES.push({x0:54,y0:7,x1:58,y1:10,key:'dowon',any:true});
+  // 고사관수도
+  place(sprCliff(),44,22,{x:44*T,label:'고사관수도'});block(42,20,45,22);
+  place(sprFlatRock(),41,24,{x:41*T+8});block(41,24,41,24);
+  mkNPC({x:41*T+8,y:24*T+10,oy:-6,seated:true,dir:'left',name:'고사',noTag:true,look:LK({outfit:'dopo',top:'#ece6d6',hairColor:'#2a2220'}),
+    chat:['물이 참 맑구나…','흐르는 물처럼 마음도 흘러가는구나.'],talk:()=>quizTalk('물을 바라보는 선비',['…쉿, 조용히. 물소리를 듣는 중이오.',...INFO.gosa.lines],'gosa')});
+  PLACES.push({x0:39,y0:23,x1:44,y1:25,key:'gosa',any:true});
+  // 분청사기 가마
+  place(sprKiln(1),11,43,{x:11*T,label:'분청사기 가마',mm:[6,39,9,4]});block(7,40,14,43);
+  place(sprShed(),22,41,{x:22*T+8,mm:[19,38,7,4]});block(19,39,25,41);
+  place(sprWoodpile(),14,39);block(14,39,14,39);
+  place(sprRack(false),27,44,{x:27*T+8});block(25,44,29,44);
+  for(const [px,py,ph] of [[18,43,0],[22,43.5,2]]){
+    mkNPC({x:px*T+8,y:py*T+8,seated:true,anim:'work',ph,dir:'down',name:'도공',noTag:true,look:LK({top:'#b8b2a4',bottom:'#8a847a'}),
+      chat:['흰 흙을 귀얄로 쓱쓱 발라야지.','이 물고기 무늬 어떤가?','가마 불을 잘 지켜라!'],talk:()=>openDialog('도공',['흙을 빚는 중이라 바쁘다오. 저기 사기장 어른께 여쭈어 보시오.'])});
+    place(sprWheel(false),px,py|0,{x:px*T+8,y:py*T+12});
+  }
+  mkNPC({x:16*T+8,y:40*T+8,dir:'down',name:'사기장',look:LK({top:'#8a7a62',bottom:'#6a5e4c',hat:'gat'}),
+    chat:['청자를 굽던 가마가 다 무너졌으니…','그래도 우리 그릇은 우리가 만들어야지!'],
+    talk:()=>quizTalk('분청사기 사기장',['어서 오시오. 여기는 분청사기를 굽는 가마라오.',
+      '고려 말, 바닷가를 노략질하던 왜구 때문에 강진과 부안의 청자 가마가 무너지고 도공들이 전국으로 흩어졌소.',
+      '흩어진 도공들은 각 지방의 거친 흙으로 그릇을 빚었고, 그 위에 흰 흙을 발라(분장) 깨끗하게 꾸몄지. 이것이 분청사기라오.',
+      '귀얄로 쓱쓱 바르거나, 무늬를 긁어 내거나, 흰 흙물에 덤벙 담그기도 하며 자유롭고 활달한 무늬를 만들었소.'],'buncheong_shop',['그대는 분청사기를 잘 아는구려! 귀얄을 잘 써 보시오.'])});
+  // 동물과 숲
+  forest(['round','pine','round'],5);
+  scatter(18,[i=>treeSpr(i%3?'round':'pine',i),i=>sprBush(i*13),i=>sprRock(i)],4);
+  scatterAnimals(['rabbit','dog','cat'],6,21);
+  m.spawn=[22*T+8,28*T+4];
+}
+/* ── 조선 중기 · 선비의 마을 ── */
+function buildMiddle(m){
+  river([[44,0],[42,8],[38,15],[35,22],[37,30],[39,38],[37,48]],1.4);
+  road([[0,28],[10,27.5],[20,29],[34,27.5],[46,28.5],[56,26.5],[64,26]],1.5);
+  blob('S',27,23.5,3.8,2.6,.2,4);
+  road([[16,28],[16,24]],1.1);road([[27,27.5],[27,25]],1.0);
+  road([[46,28.5],[48,21],[50,16]],1.1);blob('S',50,16,6.5,2.4,.18,7);
+  road([[10,27.5],[12,33],[14,38.5]],1.1);blob('D',14,40,7,3,.2,9,['W']);
+  road([[46,28.5],[47,34],[48,38.5]],1.1);blob('D',49,40.5,9,3.2,.22,10,['W']);
+  flowers(13);waterSolid();
+  place(sprHallMiddle(),16,23,{x:16*T,label:'조선 중기 전시실',mm:[12,19,8,5]});block(12,19,19,23);
+  PLACES.push({x0:14,y0:23,x1:17,y1:25,key:'middle'});
+  for(const [px,py] of [[13,25],[18,25]]){place(sprJar('cheolhwa'),px,py);block(px,py,px,py)}
+  place(sprPalsangjeon(),27,22,{x:27*T+8,label:'법주사 팔상전'});block(26,21,28,22);
+  PLACES.push({x0:25,y0:21,x1:29,y1:24,key:'palsangjeon',any:true});
+  // 서원: 성리학을 공부하는 선비들
+  place(sprSeowon(),50,14,{x:50*T+8,label:'서원',mm:[46,10,9,5]});block(46,11,54,14);
+  PLACES.push({x0:48,y0:14,x1:52,y1:15,key:'seowon'});
+  const sc=[['퇴계 선생','#ece6d6'],['율곡 선생','#dfe8f0'],['젊은 선비','#e8e0f0'],['젊은 선비','#ece6d6']];
+  const sl=[['리(理)와 기(氣)에 대해 논해 봅시다.','마음을 공경(敬)으로 바르게 해야지요.'],['배운 것은 실천해야 참된 학문이오.','먹으로 대나무를 치며 마음을 닦지요.'],['오늘은 『소학』을 외웠습니다.','그림에도 선비의 뜻을 담아야지요.'],['수묵에 옅은 색만 살짝 더하면…','붓끝에 마음이 드러난다 하였소.']];
+  sc.forEach(([nm,tp],i)=>mkNPC({x:(47+i*2)*T+8,y:16*T+10,seated:true,dir:'up',name:nm,noTag:i>1,look:LK({outfit:'dopo',top:tp,hat:i<2?'gat':'none'}),chat:sl[i],
+    talk:()=>openDialog(nm,[...sl[i],'서원 앞 안내를 살펴보면 선비들의 그림 이야기를 알 수 있소.'])}));
+  // 대숲 속 대청마루: 이정이 풍죽도를 그린다
+  const br=mulberry32(31);
+  for(let i=0;i<70;i++){const x=3+(br()*24|0),y=31+(br()*14|0);if(!['G','F'].includes(ground[y][x])||solid[y][x])continue;
+    if(Math.abs(x-14)<6&&Math.abs(y-39.5)<3.2)continue;if(at(x,y-1)==='P'||at(x,y+1)==='P'||at(x-1,y)==='P'||at(x+1,y)==='P')continue;
+    place(bambooSpr(i),x,y);solid[y][x]=true}
+  const maru=place(sprMaru(),14,39,{x:14*T+8,label:'대청마루',mm:[10,34,8,5]});block(10,36,18,39);
+  mkNPC({x:13*T+8,y:40*T+1,oy:-16,seated:true,dir:'right',name:'이정',look:LK({outfit:'dopo',top:'#ece6d6',hat:'gat'}),noShadow:true,
+    chat:['바람에 흔들려도 꺾이지 않는 대나무여…','댓잎은 바람 부는 쪽으로 쓸리게…'],
+    talk:()=>quizTalk('이정',['나는 탄은 이정이라 하오. 세종대왕의 고손자로, 대나무를 즐겨 그렸지.',
+      '지금 그리는 것은 「풍죽도」라오. 거센 바람에 휘면서도 꺾이지 않는 대나무에 선비의 굳은 뜻을 담았소.',
+      '진한 먹으로 앞의 대나무를, 옅은 먹으로 뒤의 대나무를 그려 깊이를 냈지. 이것이 먹의 농담이오.'],'ijeong',['대나무 막대기를 손에 들어 보시오. 꼿꼿한 선비가 된 기분일 게요.'])});
+  // 백자 가마(분원)
+  place(sprKiln(2),57,43,{x:57*T,label:'백자 가마 (분원)',mm:[53,39,8,4]});block(53,40,60,43);
+  place(sprShed(),45,40,{x:45*T+8,mm:[42,37,7,4]});block(42,38,48,40);
+  place(sprRack(true),50,43,{x:50*T+8});block(48,43,52,43);
+  displayObj=place(sprDisplay(null),53,38,{x:53*T+8,label:'내가 만든 청화백자'});block(53,38,53,38);loadDisplay();
+  for(const [px,py,ph] of [[44,42,1],[48,42.5,3]]){
+    mkNPC({x:px*T+8,y:py*T+8,seated:true,anim:'work',ph,dir:'down',name:'도공',noTag:true,look:LK({top:'#ece6d6',bottom:'#c9c3b8'}),
+      chat:['흙을 곱게 걸러야 백자가 하얗게 나온다네.','물레를 천천히…','왕실에 올릴 그릇이라 정성을 다해야지.'],talk:()=>openDialog('도공',['백자는 티 없이 하얀 것이 생명이라오. 사기장 어른께 여쭈어 보시오.'])});
+    place(sprWheel(true),px,py|0,{x:px*T+8,y:py*T+12});
+  }
+  mkNPC({x:51*T+8,y:39*T+8,dir:'down',name:'분원 사기장',look:LK({top:'#ece6d6',bottom:'#8a847a',hat:'gat'}),
+    chat:['청화 안료는 금보다 귀하다네.','하얀 바탕에 푸른 그림이라…'],
+    talk:()=>quizTalk('분원 사기장',['여기는 왕실에 올릴 백자를 굽는 관청 가마, 분원이라오.',
+      '조선 사람들은 티 없이 하얀 백자를 사랑했소. 깨끗하고 검소한 선비의 마음과 닮았기 때문이지.',
+      '하얀 바탕에 코발트 안료로 푸른 그림을 그린 것을 청화백자라 하오. 다만 이 안료는 먼 나라에서 들여와 무척 귀했지.'],
+      'baekja_shop',['자, 귀한 청화 안료를 내어 주겠소. 그대만의 청화백자를 꾸며 보시오!'],()=>{if(prog.quiz.baekja_shop)openDesign()})});
+  portal(0,26,0,30,'early',62.4,28,'left');portal(63,24,63,28,'late',1.6,30,'right');
+  forest(['pine','round','bamboo','pine'],7);
+  scatter(14,[i=>treeSpr(i%2?'pine':'plum',i),i=>sprBush(i*7),i=>sprRock(i+3)],6);
+  scatterAnimals(['cat','rabbit','dog'],5,33);
+  m.spawn=[2*T,28*T+8];
+}
+/* ── 조선 후기 · 진경과 풍속 ── */
+function buildLate(m){
+  blob('R',38,8,15,6.5,.2,3);
+  road([[0,30],[12,31],[26,29.5],[38,30.5],[52,31],[64,30],[72,30.5]],1.5);
+  road([[38,13.4],[38,20],[38,30]],1.1);
+  road([[57.5,11],[57.5,20],[58,30]],1.1);fillRect('S',57,10,68,11);fillRect('W',59,12,68,17);
+  road([[13,30],[13,27.5]],1.1);fillRect('J',5,14,21,27);
+  road([[48,30.5],[48,28]],1.1);
+  road([[64,30],[67,27]],1.0);blob('G',68,26,7,3.5,.25,14);
+  road([[40,30.5],[41,36],[42,39.5]],1.1);blob('D',42,41.5,9,3.2,.22,15);
+  road([[13,31],[12,40],[12,48]],1.1);road([[26,29.5],[26,40],[26,48]],1.1);
+  road([[30,30],[28,37],[22,39]],1.0);blob('D',19,39.5,6,2.6,.22,18);
+  flowers(17);waterSolid();
+  // 인왕산과 정선의 정자
+  place(sprInwang(),38,13,{x:38*T+8,label:'인왕산',mm:[26,2,25,12]});
+  for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){const dx=(x+.5-(38.5))/12.5,dy=(y+.5-8)/6.2;if(dx*dx+dy*dy<1&&!(x>=37&&x<=39&&y>=12))solid[y][x]=true}
+  portal(37,12,39,13,'inwang',15*T,41*T,'up');
+  PLACES.push({x0:37,y0:12,x1:39,y1:13,key:'inwang_trail',any:true});
+  place(sprJeongja(),31,17,{x:31*T,label:'정자',mm:[29,15,4,3]});block(29,16,32,17);
+  mkNPC({x:31*T,y:18*T+1,oy:-10,seated:true,noShadow:true,dir:'up',name:'정선',look:LK({outfit:'dopo',top:'#ece6d6',hat:'gat'}),
+    chat:['비 갠 뒤 인왕산의 바위가 참으로 웅장하구나…','젖은 바위는 먹을 여러 번 겹쳐 진하게…'],
+    talk:()=>quizTalk('겸재 정선',['나는 겸재 정선이오. 우리 산천을 직접 보고 그리는 진경산수화를 그리지.',
+      '지금 그리는 것은 「인왕제색도」(1751)라오. 여름 장맛비가 그친 뒤, 비에 젖은 인왕산의 바위가 검게 빛나는 모습이지.',
+      '젖은 바위는 먹을 여러 번 겹쳐 칠하고(적묵법), 산 아래 안개는 하얗게 비워 두었소.',
+      '인왕산 꼭대기에 올라 크게 외쳐 보시오. 산이 그대에게 대답할 게요!'],'jeongseon')});
+  // 규장각과 부용지, 정조와 신하들
+  place(sprKyujanggak(),64,9,{x:64*T,label:'규장각 (주합루)',mm:[60,3,8,7]});block(60,3,67,9);
+  PLACES.push({x0:60,y0:9,x1:67,y1:10,key:'kyujang'},{x0:59,y0:12,x1:68,y1:17,key:'buyongji',any:true});
+  place(sprIsland(),63,15,{x:64*T,label:'부용지'});
+  for(const [px,py] of [[56,8],[69,9],[56,15],[69,16]]){place(treeSpr('pine',px+py),px,py);block(px,py,px,py)}
+  mkNPC(Object.assign(KING,{x:64*T,y:10*T+12,dir:'down',talk:talkCourt}));
+  mkNPC({x:61*T+8,y:11*T+12,dir:'right',name:'정약용',id:'jeong',talk:talkCourt,look:LK({hat:'samo',outfit:'official',top:'#3f8f5a',bottom:'#efe9dc'})});
+  mkNPC({x:66*T+8,y:11*T+12,dir:'left',name:'박제가',id:'park',talk:talkCourt,look:LK({skin:'#d9a57c',hat:'samo',outfit:'official',top:'#2f4b8f',bottom:'#efe9dc'})});
+  mkNPC({x:59*T+8,y:11*T+12,dir:'right',name:'이덕무',id:'lee',talk:talkCourt,look:LK({skin:'#f7d7ba',hairColor:'#4b3122',hat:'samo',outfit:'official',top:'#2f4b8f',bottom:'#efe9dc'})});
+  m.groups.push({lines:[['king','오늘은 백성을 위한 학문에 대해 이야기해 봅시다.'],['jeong','전하, 학문은 백성의 삶에 쓸모가 있어야 하옵니다.'],['park','청나라의 앞선 기술과 문물도 배워야 하옵니다.'],['lee','신은 책 읽는 기쁨만 한 것이 없사옵니다.'],['king','좋소. 규장각에서 함께 새 책을 펴냅시다.']]});
+  // 후기 전시실
+  place(sprHallLate(),48,27,{x:48*T,label:'조선 후기 전시실',mm:[44,23,8,5]});block(44,23,51,27);
+  PLACES.push({x0:46,y0:27,x1:49,y1:29,key:'late'});
+  for(const [k,px,py] of [['cheonghwa',45,29],['moon',51,29]]){place(sprJar(k),px,py);block(px,py,px,py)}
+  // 경복궁 근정전
+  place(sprGeunjeong(),13,18,{x:13*T+8,label:'경복궁 근정전',mm:[6,9,15,10]});block(6,11,20,18);
+  place(sprIlwol(),13,19,{x:13*T+8,y:19*T+2});
+  place(sprThrone(),13,19,{x:13*T+8,y:19*T+6});
+  mkNPC({x:13*T+8,y:19*T+10,seated:true,dir:'down',name:'임금',noShadow:true,look:LK({hat:'ikseon',outfit:'king',top:'#b0262a',bottom:'#efe9dc'}),
+    chat:['경들은 백성을 잘 보살피시오.','오늘 올라온 상소를 살펴보겠소.'],talk:()=>quizTalk('임금',['근정전에 온 것을 환영하오. 근(勤)은 부지런하다는 뜻이니, 부지런히 나라를 다스리라는 이름이오.',...INFO.geunjeong.lines],'geunjeong')});
+  block(12,19,14,19);
+  const ofc=[['#c0392b','영의정'],['#c0392b','좌의정'],['#2f4b8f','이조판서'],['#2f4b8f','호조판서'],['#3f8f5a','승지'],['#3f8f5a','사관']];
+  for(let i=0;i<6;i++){const side=i%2?1:-1, row=i>>1, px=13+side*3, py=21.6+row*1.9;
+    place(sprPumgye(),px+side*-1,py|0,{x:(px+side*-1)*T+8,y:(py+.3)*T});
+    mkNPC({x:px*T+8,y:py*T+10,dir:'up',name:ofc[i][1],noTag:true,look:LK({hat:'samo',outfit:'official',top:ofc[i][0],bottom:'#efe9dc'}),
+      chat:['전하, 성은이 망극하옵니다.','신 아뢰옵니다…','품계석 앞에 바르게 서야지요.'],talk:()=>openDialog(ofc[i][1],['지금은 조회 중이오. 품계석에 새긴 벼슬 순서대로 줄지어 서 있지요.','전하께 여쭈어 보시오.'])})}
+  // 십장생도와 거북
+  place(sprSipjang(),68,25,{x:68*T+8,label:'십장생도',mm:[64,22,9,3]});block(64,24,72,25);
+  PLACES.push({x0:64,y0:24,x1:72,y1:25,key:'sipjang'});
+  for(const [px,py] of [[63,27],[73,27],[66,28.4]]){place(sprBulocho(),px,py|0,{x:px*T+8})}
+  mkNPC({x:68*T+8,y:27*T+12,dir:'down',name:'거북',sheet:null,animal:'turtle',look:null,
+    chat:['나는 천 년을 산다네…','느릿느릿, 그래도 오래오래.'],
+    talk:()=>quizTalk('거북',['허허, 나는 십장생의 거북이라네. 천 년, 만 년 오래 산다고 믿었지.',...INFO.sipjang.lines],'turtle',['내 등껍질과 꼭 닮은 껍질을 주었으니, 등에 메고 다녀 보게나.'])});
+  addAnimal('crane',71,28,{catchable:false});addAnimal('deer',65,28.5,{catchable:false});
+  // 달항아리 가마
+  place(sprKiln(3),50,44,{x:50*T,label:'달항아리 가마',mm:[46,40,8,4]});block(46,41,53,44);
+  place(sprShed(),36,41,{x:36*T+8,mm:[33,38,7,4]});block(33,39,39,41);
+  for(const [px,py] of [[40,43],[45,43]]){place(sprJar('moon'),px,py);block(px,py,px,py)}
+  mkNPC({x:42*T+8,y:41*T+8,dir:'down',name:'달항아리 도공',anim:'work',look:LK({top:'#ece6d6',bottom:'#c9c3b8'}),
+    chat:['이렇게 큰 항아리는 한 번에 빚을 수가 없어…','위아래를 따로 빚어 붙여야지.'],
+    talk:()=>openDialog('달항아리 도공',['보름달처럼 큰 항아리를 만들고 싶은데, 물레 위에서 한 번에 빚으면 무너져 버린다오.',
+      '그래서 커다란 사발 두 개를 따로 빚어, 위아래로 맞붙여 하나로 만들지. 그래서 가운데에 이음새가 있고, 모양이 살짝 비뚤기도 하다오.',
+      '그 넉넉하고 자연스러운 모양이 달항아리의 멋이지! 그대도 크기를 잘 맞춰 한번 붙여 보겠소?'],()=>openJar())});
+  // 김득신 「야묘도추」: 초가집과 주인 부부
+  place(sprChogaHouse(),19,38,{x:19*T+8,label:'야묘도추 초가집',mm:[15,33,8,5]});block(15,35,22,38);
+  place(sprHen(),23,40,{x:23*T+8});
+  yamyoOwner=mkNPC({x:17*T+8,y:39*T+10,dir:'down',name:'주인 영감',look:LK({outfit:'dopo',top:'#ece6d6',hairColor:'#c9c3b8'}),
+    chat:['아이고, 내 병아리!','저 도둑고양이를 잡아야 하는데…'],talk:talkYamyo});
+  mkNPC({x:21*T+8,y:39*T+10,dir:'down',name:'안주인',noTag:true,look:LK({hair:'bun',outfit:'chima',top:'#ece6d6',bottom:'#8a847a'}),
+    chat:['영감, 마루에서 떨어지겠어요!','에구머니나!'],talk:()=>openDialog('안주인',['들고양이가 병아리를 물고 달아났지 뭐예요. 우리 영감한테 말 좀 걸어 주세요.'])});
+  PLACES.push({x0:17,y0:38,x1:21,y1:38,key:'yamyo'});
+  // 단오풍정 · 씨름 가는 길
+  place(sprGateDano(),12,48,{x:12*T+8,label:'신윤복 「단오풍정」 가는 길',mm:[10,45,5,3]});block(9,46,10,48);block(14,46,15,48);
+  portal(11,47,13,48,'dano',20*T+8,25*T,'up');
+  place(sprGateSsireum(),26,48,{x:26*T+8,label:'김홍도 「씨름」 가는 길',mm:[24,45,5,3]});block(23,47,24,48);block(28,47,29,48);
+  portal(25,47,27,48,'ssireum',15*T+8,21*T,'up');
+  portal(0,28,0,32,'middle',62.4,26,'left');
+  forest(['pine','round','pine'],9);
+  scatter(14,[i=>treeSpr(i%2?'pine':'round',i),i=>sprBush(i*5),i=>sprRock(i+7)],8);
+  scatterAnimals(['dog','rabbit','cat'],5,41);
+  if(prog.flags.yamyo_on&&!prog.flags.yamyo_got)addAnimal('blackcat',34,34,{quest:true,catchable:false});
+  m.spawn=[2*T,30*T+8];
+}
+/* ── 인왕산 (들어가 보는 산) ── */
+function buildInwang(m){
+  fillRect('R',0,0,MW-1,MH-1);
+  for(let y=0;y<MH;y++)for(let x=0;x<MW;x++)if(vnoise(x*.25,y*.25,5)>.62)ground[y][x]='G';
+  road([[15,44],[15,39],[9,34],[20,28],[10,21],[19,14],[15,8],[15,4]],1.1);
+  blob('S',15,4,3.5,2.2,.2,3);
+  place(sprPeak(),15,3,{x:15*T+8,label:'인왕산 꼭대기'});block(14,2,16,3);
+  PLACES.push({x0:13,y0:2,x1:17,y1:5,key:'peak',any:true});
+  const r=mulberry32(44);
+  for(let i=0;i<120;i++){const x=2+(r()*(MW-4)|0),y=5+(r()*(MH-8)|0);if(solid[y][x])continue;
+    let near=false;for(let yy=y-2;yy<=y+1;yy++)for(let xx=x-2;xx<=x+2;xx++)if(at(xx,yy)==='P'||at(xx,yy)==='S'||(solid[yy]&&solid[yy][xx]))near=true;
+    if(near)continue;if(r()<.55){place(sprCrag(i*3+1),x,y);block(x-1,y,x+1,y)}else{place(treeSpr('pine',i),x,y);solid[y][x]=true}}
+  portal(14,43,16,43,'late',38*T+8,15*T,'down');
+  forest(['pine'],12,2.4);
+  m.spawn=[15*T+8,41*T];
+}
+/* ── 신윤복 「단오풍정」 ── */
+function buildDano(m){
+  river([[-1,12],[9,14],[19,13],[29,15],[41,14]],2.2);
+  road([[20,28],[20,21],[17,18]],1.1);
+  flowers(23,.62);waterSolid();
+  const w=place(sprWillow(),10,9,{x:10*T});block(9,9,10,9);
+  mkNPC({x:11.3*T,y:9.8*T,name:'그네 뛰는 여인',anim:'swing',sw:{ax:11.3*T,ay:106,len:50},noShadow:true,dir:'down',
+    look:LK({hair:'gache',outfit:'chima',top:'#f2c84b',bottom:'#c0392b'}),chat:['그네를 높이 뛰니 하늘을 나는 것 같구나!','바람이 참 시원하다!'],
+    talk:()=>openDialog('그네 뛰는 여인',['단옷날엔 이렇게 그네를 뛰며 논답니다. 노란 저고리에 붉은 치마, 그림 속 제 모습 예쁘지요?'])});
+  for(const [px,py,top,bot,txt] of [[16,16.6,'#ece6d6','#5b7fb0','창포물에 머리를 감으면 머리카락이 윤이 난대요.'],[19,16.8,'#f2d0d8','#3f7a6a','단옷날엔 일 년 내내 건강하라고 머리를 감지요.'],[23,16.5,'#ece6d6','#8a7ab0','물이 차가워서 정신이 번쩍 드네!']]){
+    mkNPC({x:px*T+8,y:py*T,seated:true,anim:'work',dir:'up',name:'여인',noTag:true,look:LK({hair:'braid',outfit:'chima',top,bottom:bot}),chat:[txt],
+      talk:()=>quizTalk('냇가의 여인',[txt,'단오는 음력 5월 5일이에요. 수릿날이라고도 하지요.'],'dano',['창포 한 줌 가져가세요. 머리 감을 때 쓰면 좋아요.'])})}
+  mkNPC({x:28*T,y:21*T,name:'보따리 인 여인',noTag:true,dir:'left',patrol:{x0:24*T,x1:33*T,sp:20},look:LK({hair:'bun',outfit:'chima',top:'#ece6d6',bottom:'#4a4a55'}),
+    chat:['빨래 보따리가 무겁기도 하네…','술병이랑 먹을 것을 날라야지.'],talk:()=>openDialog('보따리 인 여인',['머리에 인 보따리가 무거워요. 그래도 단옷날이라 마음은 가볍답니다!'])});
+  place(sprBigRock(5),33,9,{x:33*T+8});block(32,9,34,9);
+  for(const [px,txt] of [[32.4,'쉿! 들키면 혼나!'],[34.4,'히히, 저기 좀 봐!']])
+    mkNPC({x:px*T,y:8*T+12,dir:'down',name:'동자승',noTag:true,look:LK({hair:'shaved',outfit:'dopo',top:'#9a9a9a',bottom:'#9a9a9a'}),chat:[txt],
+      talk:()=>openDialog('동자승',['저희는 절에서 내려온 동자승이에요. 바위 뒤에 숨어서 구경하는 중이에요. 쉿!'])});
+  place(sprSign(),24,22);block(24,22,24,22);PLACES.push({x0:24,y0:22,x1:24,y1:22,key:'dano',any:true});
+  for(const [px,py] of [[6,18],[30,19],[36,20],[3,9]]){place(sprBigRock(px*3+py),px,py);block(px,py,px,py)}
+  portal(19,27,21,27,'late',12*T+8,45*T+8,'up');
+  forest(['round','pine','round'],13,2.6);
+  m.spawn=[20*T+8,25*T];
+}
+/* ── 김홍도 「씨름」 ── */
+function buildSsireum(m){
+  blob('D',15,10.5,10,6.2,.15,4);
+  road([[15,24],[15,17]],1.1);
+  flowers(25,.62);
+  const cx=15, cy=10.5, looks=[['gat','#ece6d6'],['none','#d9cfb8'],['gat','#c9d6e0'],['none','#ece6d6'],['gat','#e8e0c8'],['none','#cfc6b4']];
+  const lines=['옳지! 들배지기다!','저쪽이 넘어가겠는걸!','힘내라!','어이쿠, 아슬아슬하네!','이번 판은 누가 이길꼬?','엿이나 하나 사 먹을까?','허허, 젊은 것들 힘 좋네.'];
+  for(let i=0;i<16;i++){const a=i/16*Math.PI*2+.2;if(Math.abs(Math.sin(a)-1)<.15)continue;
+    const px=cx+Math.cos(a)*7.2, py=cy+Math.sin(a)*4.4, dx=cx-px, dy=cy-py;
+    const dir=Math.abs(dx)>Math.abs(dy)*1.6?(dx>0?'right':'left'):(dy>0?'down':'up');
+    const [hat,top]=looks[i%looks.length];
+    mkNPC({x:px*T,y:py*T+8,seated:true,dir,name:'구경꾼',noTag:true,look:LK({hat,outfit:i%3?'baji':'dopo',top,hairColor:i%5?'#2a2220':'#8a847a'}),chat:[lines[i%lines.length]],
+      talk:()=>quizTalk('구경꾼',['허허, 씨름 구경 왔소? 자리 잡고 앉으시오.',...INFO.ssireum.lines],'ssireum',['씨름 구경은 둥글게 앉아서 봐야 제맛이지!'])})}
+  mkNPC({x:(cx-.55)*T,y:cy*T+10,dir:'right',anim:'push',pushDir:1,name:'씨름꾼',noTag:true,look:LK({top:'#ece6d6',bottom:'#ece6d6'}),chat:['으라차차!','끄응…!']});
+  mkNPC({x:(cx+.55)*T,y:cy*T+10,dir:'left',anim:'push',pushDir:1,name:'씨름꾼',noTag:true,look:LK({top:'#ece6d6',bottom:'#ece6d6',skin:'#d9a57c'}),chat:['어림없다!','이얍!']});
+  for(const n of NPCS)if(n.name==='씨름꾼')n.talk=()=>openDialog('씨름꾼',['지금 한창 겨루는 중이오! 샅바를 꽉 잡고…으라차!']);
+  mkNPC({x:24*T,y:16*T+8,dir:'left',name:'엿장수',look:LK({top:'#ece6d6',bottom:'#8a7a62',hairColor:'#2a2220'}),chat:['엿 사세요~ 달콤한 엿이요!','엿 먹고 힘내서 응원하세요!'],
+    talk:()=>quizTalk('엿장수 아이',['엿 사세요, 엿! 씨름 구경엔 엿이 최고지요.','저도 그림 「씨름」에 나온답니다. 구경꾼들 사이에서 엿판을 메고 있어요.'],'ssireum',['자, 엿 하나 드릴게요! 맛있게 드세요.'])});
+  place(sprYeotTray(),24,16,{x:23*T+12,y:16*T+12});
+  place(sprSign(),6,19);block(6,19,6,19);PLACES.push({x0:6,y0:19,x1:6,y1:19,key:'ssireum',any:true});
+  portal(14,23,16,23,'late',26*T+8,45*T+8,'up');
+  forest(['round','pine'],15,2.6);
+  m.spawn=[15*T+8,21*T];
 }
 
 /* ════════════════════════════════════════════════
@@ -1050,44 +1671,27 @@ function buildVillage(){
 const view=$('#view'), vx=view.getContext('2d');
 let SCALE=3, VW=0, VH=0, groundCanvas=null, miniBase=null;
 const player={x:28*T,y:24*T+8,dir:'down',walk:0,moving:false,sheet:null};
-const npc={x:24*T+8,y:23*T+12,dir:'down',sheet:null,name:'큐레이터',id:'curator',
+const npc={x:22*T+8,y:29*T+12,dir:'down',name:'큐레이터',id:'curator',talk:talkCurator,
   look:{skin:'#f7d7ba',hair:'bun',hairColor:'#4b3122',hat:'none',outfit:'dopo',top:'#3f8f5a',bottom:'#ece6d6'}};
-// 규장각 앞에서 학문을 논하는 정조와 신하들
-const KING={x:44*T,y:10*T+12,dir:'down',sheet:null,name:'정조',id:'king',cls:'king',
-  look:{skin:'#efc29c',hair:'topknot',hairColor:'#2a2220',hat:'ikseon',outfit:'king',top:'#b0262a',bottom:'#efe9dc'}};
-const NPCS=[npc,KING,
-  {x:41*T+8,y:11*T+12,dir:'right',sheet:null,name:'정약용',id:'jeong',
-   look:{skin:'#efc29c',hair:'topknot',hairColor:'#2a2220',hat:'samo',outfit:'official',top:'#3f8f5a',bottom:'#efe9dc'}},
-  {x:46*T+8,y:11*T+12,dir:'left',sheet:null,name:'박제가',id:'park',
-   look:{skin:'#d9a57c',hair:'topknot',hairColor:'#2a2220',hat:'samo',outfit:'official',top:'#2f4b8f',bottom:'#efe9dc'}},
-  {x:39*T+8,y:11*T+12,dir:'right',sheet:null,name:'이덕무',id:'lee',
-   look:{skin:'#f7d7ba',hair:'topknot',hairColor:'#4b3122',hat:'samo',outfit:'official',top:'#2f4b8f',bottom:'#efe9dc'}},
-];
-// 말풍선으로 오가는 대화 (차례대로 한 사람씩)
-const TALK=[
-  ['king','오늘은 백성을 위한 학문에 대해 이야기해 봅시다.'],
-  ['jeong','전하, 학문은 백성의 삶에 쓸모가 있어야 하옵니다.'],
-  ['park','청나라의 앞선 기술과 문물도 배워야 하옵니다.'],
-  ['lee','신은 책 읽는 기쁨만 한 것이 없사옵니다.'],
-  ['king','좋소. 규장각에서 함께 새 책을 펴냅시다.'],
-];
+const KING={name:'정조',id:'king',cls:'king',look:{skin:'#efc29c',hair:'topknot',hairColor:'#2a2220',hat:'ikseon',outfit:'king',top:'#b0262a',bottom:'#efe9dc'}};
 const keys={};
-let courtT=0;
-let running=false, dialog=null, lastT=0, waterT=0, toastTimer=0, curPlace='';
+let animT=0, running=false, dialog=null, lastT=0, waterT=0, toastTimer=0, curPlace='', moving=false;
+let displayObj=null, yamyoOwner=null;
+let pet=null; const trail=[];
 
 function buildGround(){
   groundCanvas=mkCanvas(MW*T,MH*T);const g=groundCanvas.getContext('2d');
   for(let y=0;y<MH;y++)for(let x=0;x<MW;x++)g.drawImage(makeTile(ground[y][x],x,y,at),x*T,y*T);
-  // 연꽃잎
-  const r=mulberry32(99);
-  for(let i=0;i<16;i++){const x=39*T+8+r()*(9*T-8)|0,y=12*T+8+r()*(5*T-8)|0;if(at(x/T|0,y/T|0)!=='W'||at((x+6)/T|0,y/T|0)!=='W')continue;if(Math.abs(x-44*T)<26&&Math.abs(y-15*T)<20)continue;
-    pell(g,x,y,4,2,'#3f8f43');g.fillStyle='#5aa04a';g.fillRect(x-2,y-1,3,1);g.fillStyle='#2f6e33';g.fillRect(x,y,1,2);
-    if(r()<.45){g.fillStyle='#ffb3c8';g.fillRect(x-1,y-2,3,2);g.fillStyle='#fff';g.fillRect(x,y-3,1,1)}}
-  // 작은 미니맵
+  if(MAP.id==='late'){ // 부용지 연꽃잎
+    const r=mulberry32(99);
+    for(let i=0;i<18;i++){const x=59*T+8+r()*(9*T-8)|0,y=12*T+8+r()*(5*T-8)|0;if(at(x/T|0,y/T|0)!=='W'||at((x+6)/T|0,y/T|0)!=='W')continue;if(Math.abs(x-64*T)<26&&Math.abs(y-15*T)<20)continue;
+      pell(g,x,y,4,2,'#3f8f43');g.fillStyle='#5aa04a';g.fillRect(x-2,y-1,3,1);g.fillStyle='#2f6e33';g.fillRect(x,y,1,2);
+      if(r()<.45){g.fillStyle='#ffb3c8';g.fillRect(x-1,y-2,3,2);g.fillStyle='#fff';g.fillRect(x,y-3,1,1)}}
+  }
   miniBase=mkCanvas(MW,MH);const m=miniBase.getContext('2d');
-  const mc={G:'#5aa04a',F:'#62a852',P:'#c9a46a',S:'#b9b3a6',W:'#3f7fc4',D:'#e3cb8e'};
-  for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){m.fillStyle=solid[y][x]&&ground[y][x]!=='W'?'#2f6e33':mc[ground[y][x]];m.fillRect(x,y,1,1)}
-  m.fillStyle='#7a4e2c';[[8,6,8,5],[40,3,8,7],[8,30,8,5],[40,30,8,5]].forEach(([a,b,w,h])=>m.fillRect(a,b,w,h));
+  const mc={G:'#5aa04a',F:'#62a852',P:'#c9a46a',S:'#b9b3a6',W:'#3f7fc4',D:'#e3cb8e',K:'#2f6e33',M:'#a9c9b0',R:'#76797e',B:'#a8743f',J:'#d4cdbd'};
+  for(let y=0;y<MH;y++)for(let x=0;x<MW;x++){m.fillStyle=mc[ground[y][x]]||'#5aa04a';m.fillRect(x,y,1,1)}
+  m.fillStyle='#7a4e2c';for(const o of objects)if(o.mm)m.fillRect(...o.mm);
 }
 
 // 이름표 DOM
@@ -1098,17 +1702,44 @@ function makeTags(){
   labelBox.innerHTML='';tags=[];
   const add=addTag;
   add('me',look.name,()=>[player.x,player.y-SH+2]);
-  for(const n of NPCS){n.tag=add('npc',n.name,()=>[n.x,n.y-SH+2]);if(n.id!=='curator'){n.bubble=add('bubble','',()=>[n.x,n.y-SH-12]);n.bubble.style.display='none'}}
+  if(pet)pet.tag=add('pet',pet.name,()=>pet?[pet.x,pet.y-pet.sheet.left[0].height-1]:[-9999,-9999]);
+  for(const n of NPCS){
+    const hy=()=>n.y-(n.animal?16:SH)+2+(n.oy||0)+(n.seated?7:0);
+    if(!n.noTag)n.tag=add('npc',n.name,()=>[n.x,hy()]);
+    if(n.chat||n.id&&GROUPS.length){n.bubble=add('bubble','',()=>[n.x+(n.swx||0),hy()-(n.noTag?2:12)]);n.bubble.style.display='none'}
+  }
   for(const o of objects)if(o.label)o.tagEl=add('place',o.label,()=>[o.x,o.y-o.spr.height-2]);
+  for(const o of net.others.values()){o.tag=add('other',o.name,()=>[o.x,o.y-SH+2])}
   pressTag=add('press','Space',()=>pressPos);pressTag.style.display='none';
 }
 let pressTag=null, pressPos=[0,0];
+function floatText(text,wx,wy,ms=1600,cls=''){const el=addTag('float '+cls,text,()=>[wx,wy]);setTimeout(()=>removeTag(el),ms)}
 
 function resize(){
   SCALE = Math.min(innerWidth,innerHeight) < 560 ? 2 : 3;
   VW=Math.ceil(innerWidth/SCALE);VH=Math.ceil(innerHeight/SCALE);
   view.width=VW;view.height=VH;view.style.width=VW*SCALE+'px';view.style.height=VH*SCALE+'px';
-$('#mini').width=MW*3;$('#mini').height=MH*3;
+  $('#mini').width=MW*3;$('#mini').height=MH*3;
+}
+
+/* ── 지도 옮겨 가기 ── */
+let switching=false;
+function enterMap(id,px,py,dir,instant){
+  if(switching)return;
+  const go=()=>{
+    useMap(getMap(id));
+    player.x=px;player.y=py;if(dir)player.dir=dir;
+    for(let i=0;i<40&&blockedAt(player.x,player.y);i++)player.y+=(dir==='up'?-2:2);
+    trail.length=0;if(pet){pet.x=player.x+(dir==='left'?14:-14);pet.y=player.y}
+    makeTags();resize();curPlace='';
+    if(['early','middle','late'].includes(id))setFlag('map_'+id);
+    sendPos(true);
+    toast(`<b style="color:var(--gold)">${esc(MAP.name)}</b>`,1600);
+  };
+  if(instant){go();return}
+  switching=true;for(const k in keys)delete keys[k];
+  $('#fade').style.opacity=1;
+  setTimeout(()=>{go();$('#fade').style.opacity=0;setTimeout(()=>switching=false,350)},380);
 }
 
 let starting=false;
@@ -1132,25 +1763,26 @@ async function startGame(){
   $('#fade').style.opacity=1;
   setTimeout(()=>{
     $('#create').style.display='none';$('#game').style.display='block';
+    prog=loadProg(look.name);
     player.sheet=buildSheet(look);
-    for(const n of NPCS)if(!n.sheet)n.sheet=buildSheet(n.look);
-    if(!groundCanvas){buildGround()}
-    makeTags();resize();
-    const hf=$('#hudFace').getContext('2d');hf.clearRect(0,0,SW,SH);hf.drawImage(player.sheet.down[0],0,0);
-    $('#hudName').textContent=look.name;
-    $('#hudRoom').textContent='';
-    prog=loadProg(look.name);bagOpen=false;$('#bag').style.display='none';updBagBtn();applyGear();refreshTowerSite();
+    const m=getMap('early');useMap(m);
+    setPet(prog.pet||null);
+    applyGear();refreshTowerSite();loadDisplay();
     // 광장 안 빈자리에서 출발 (반 친구들이 한 칸에 겹치지 않게)
-    for(let i=0;i<40;i++){const x=(22+Math.random()*12)*T, y=(23+Math.random()*3)*T+8;if(!blockedAt(x,y)){player.x=x;player.y=y;break}}
+    player.x=m.spawn[0];player.y=m.spawn[1];
+    for(let i=0;i<40;i++){const x=m.spawn[0]+(Math.random()-.5)*8*T, y=m.spawn[1]+(Math.random()-.5)*3*T;if(!blockedAt(x,y)){player.x=x;player.y=y;break}}
     player.dir='down';
+    enterMap('early',player.x,player.y,'down',true);
+    $('#hudName').textContent=look.name;$('#hudRoom').textContent='';
+    bagOpen=false;$('#bag').style.display='none';updBagBtn();
     if(code)joinRoom(code);
     running=true;starting=false;lastT=performance.now();requestAnimationFrame(loop);
     $('#fade').style.opacity=0;
-    toast(`${esc(look.name)}님, 한국미술사 마을에 오신 것을 환영해요!<br><small style="color:var(--muted)">${code?code+'번 방 친구들과 함께해요 · ':''}큐레이터에게 말을 걸어 보세요</small>`,3800);
+    toast(`${esc(look.name)}님, 조선으로 떠나는 미술사 여행에 오신 것을 환영해요!<br><small style="color:var(--muted)">${code?code+'번 방 친구들과 함께해요 · ':''}큐레이터에게 말을 걸어 보세요</small>`,3800);
   },450);
 }
 function backToCreate(){
-  running=false;closeDialog();leaveRoom();toggleBag(false);closeTower();
+  running=false;closeDialog();leaveRoom();toggleBag(false);closeTower();closeDesign();closeJar();
   $('#fade').style.opacity=1;
   setTimeout(()=>{$('#game').style.display='none';$('#create').style.display='flex';$('#fade').style.opacity=0;requestAnimationFrame(createLoop)},450);
 }
@@ -1161,47 +1793,78 @@ function toast(html,ms){const t=$('#toast');t.innerHTML=html;t.style.display='bl
 
 /* ── 충돌 ── */
 const HB={w:10,h:6}; // 발 밑 충돌 상자
-function blockedAt(px,py){
-  const x0=Math.floor((px-HB.w/2)/T), x1=Math.floor((px+HB.w/2-1)/T), y0=Math.floor((py-HB.h)/T), y1=Math.floor((py-1)/T);
+function tileBlocked(px,py,w=HB.w,h=HB.h){
+  const x0=Math.floor((px-w/2)/T), x1=Math.floor((px+w/2-1)/T), y0=Math.floor((py-h)/T), y1=Math.floor((py-1)/T);
   for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){if(x<0||y<0||x>=MW||y>=MH||solid[y][x])return true}
-  for(const n of NPCS)if(Math.abs(px-n.x)<14&&Math.abs(py-n.y)<9)return true;
   return false;
+}
+function blockedAt(px,py){
+  if(tileBlocked(px,py))return true;
+  for(const n of NPCS)if(!n.patrol&&n.anim!=='swing'&&Math.abs(px-n.x)<14&&Math.abs(py-n.y)<9)return true;
+  return false;
+}
+
+/* ── 애완동물 ── */
+function setPet(kind){
+  if(!kind){pet=null;return}
+  pet={kind,x:player.x-14,y:player.y,dir:'left',walk:0,sheet:animalSheet(kind),name:`${look.name}의 ${ANIMAL_NAME[kind]}`};
+}
+function adopt(a){
+  const i=ANIMALS.indexOf(a);if(i>=0)ANIMALS.splice(i,1);
+  if(pet&&!pet.quest)addAnimal(pet.kind,Math.floor(pet.x/T),Math.floor(pet.y/T)); // 전에 데리고 다니던 동물은 놓아준다
+  prog.pet=a.kind;saveProg();setPet(a.kind);makeTags();
+  floatText('♥',a.x,a.y-20,1200,'heart');
+  toast(`<b style="color:var(--gold)">${ANIMAL_NAME[a.kind]}</b>가 친구가 되었어요!<br><small style="color:var(--muted)">이제 내 뒤를 졸졸 따라다녀요</small>`,2400);
+  setFlag('pet_'+a.kind);
 }
 
 /* ── 살펴보기 ── */
 function facingPoint(){const d={down:[0,10],up:[0,-12],left:[-12,-3],right:[12,-3]}[player.dir];return [player.x+d[0],player.y+d[1]]}
 function findTarget(){
   const [fx,fy]=facingPoint();
-  for(const n of NPCS)if(Math.hypot(fx-n.x,fy-(n.y-4))<14)return {kind:'npc',n};
+  for(const a of ANIMALS)if((a.catchable||(a.quest&&prog.flags.yamyo_on&&!prog.flags.yamyo_got))&&Math.hypot(player.x-a.x,player.y-a.y)<22)return {kind:'animal',a};
+  for(const n of NPCS){const nx=n.x+(n.swx||0),ny=n.y+(n.oy||0);if(Math.hypot(fx-nx,fy-(ny-4))<15||Math.hypot(fx-nx,fy-(n.y-4))<15)return {kind:'npc',n}}
   const tx=Math.floor(fx/T), ty=Math.floor(fy/T);
-  for(const p of PLACES)if(tx>=p.x0&&tx<=p.x1&&ty>=p.y0&&ty<=p.y1&&(['buyongji','welcome','desk','wongaksa','palsangjeon','tower'].includes(p.key)?true:player.dir==='up'))return {kind:'place',p};
-  // 연못은 물가 어디서든
-  if(at(tx,ty)==='W')return {kind:'place',p:{key:'buyongji'}};
+  for(const p of PLACES)if(tx>=p.x0&&tx<=p.x1&&ty>=p.y0&&ty<=p.y1&&(p.any||player.dir==='up'))return {kind:'place',p};
+  if(at(tx,ty)==='W'&&MAP.waterKey)return {kind:'place',p:{key:MAP.waterKey}};
+  if(pet&&Math.hypot(player.x-pet.x,player.y-pet.y)<20)return {kind:'pet'};
   return null;
 }
-function interact(){
-  if(bagOpen){toggleBag(false);return}
-  if(towerOpen)return;
-  if(dialog){advanceDialog();return}
-  const t=findTarget();if(!t)return;
-  if(t.kind==='npc'&&t.n.id!=='curator'){talkCourt(t.n);return}
-  if(t.kind==='npc'){
-    npc.dir={down:'up',up:'down',left:'right',right:'left'}[player.dir];
-    openDialog('큐레이터',[`어서 와요, ${look.name}님! 여기는 조선의 그림과 공예를 만나는 '한국미술사 마을'이에요.`,
-      '왼쪽 위 초기 전시실에서 출발해 왼쪽 아래 중기, 오른쪽 아래 후기 전시실 순서로 돌아보세요.',
-      '오른쪽 위에는 정조가 세운 규장각과 연못 부용지가 있어요. 전시실 문 앞에서 Space 키를 눌러 살펴보세요!',
-      '설명을 잘 읽고 퀴즈를 맞히면 아이템을 얻어요. 모은 아이템은 가방(I 키)에서 볼 수 있어요.',
-      '광장 가운데에는 짓다 만 탑이 있어요. 재료와 구조를 골라 나만의 탑을 완성해 보세요!',
-      '자, 첫 선물이에요. 화원이라면 붓이 있어야죠!']);
-    setFlag('talked');
-  }else{
-    if(t.p.key==='tower'){openTower();return}
-    const key=t.p.key, i=INFO[key], lines=i.lines.slice(), qz=QUIZ[key];
-    if(qz&&!prog.quiz[key])lines.push({...qz,key});
-    else if(qz)lines.push('이곳의 퀴즈는 이미 맞혔어요! 가방에서 받은 아이템을 확인해 보세요.');
-    openDialog(i.who,lines);
-    setFlag('read_'+key);
+function quizTalk(who,lines,key,doneLines,onEnd){
+  const L=lines.slice();
+  if(!prog.quiz[key])L.push({...QUIZ[key],key});else L.push(...(doneLines||['이미 퀴즈를 맞혔어요! 가방에서 받은 아이템을 확인해 보세요.']));
+  openDialog(who,L,onEnd);
+}
+function talkCurator(n){
+  n.dir={down:'up',up:'down',left:'right',right:'left'}[player.dir];
+  openDialog('큐레이터',[`어서 와요, ${look.name}님! 지금 우리는 조선 초기의 한양에 와 있어요.`,
+    '위쪽 길은 안견의 「몽유도원도」처럼 꿈속의 바위산을 지나 복숭아꽃 핀 도원으로 이어져요. 그 아래 물가에는 「고사관수도」의 선비가 있지요.',
+    '아래쪽에는 분청사기를 굽는 가마가 있고, 오른쪽 숭례문 옆길로 가면 조선 중기, 더 가면 조선 후기 마을이 나와요.',
+    '설명을 읽고 퀴즈를 맞히면 아이템을 얻어요. 가방(I 키)에서 볼 수 있어요. 돌아다니는 토끼·강아지·고양이를 잡으면 친구가 된답니다!',
+    '광장의 짓다 만 탑도 완성해 보세요. 자, 첫 선물이에요. 화원이라면 붓이 있어야죠!']);
+  setFlag('talked');
+}
+function talkYamyo(){
+  const n=yamyoOwner;n.dir={down:'up',up:'down',left:'right',right:'left'}[player.dir];
+  if(prog.flags.yamyo_done){openDialog('주인 영감',['고맙소! 병아리들이 잘 크고 있다오.','그 병아리를 잘 돌봐 주시오. 허허.']);return}
+  if(prog.flags.yamyo_got){
+    prog.flags.yamyo_done=true;saveProg();
+    if(pet&&pet.quest){pet=null;makeTags()}
+    const cat=ANIMALS.find(a=>a.quest);if(cat)cat.hidden=true;
+    openDialog('주인 영감',['오오, 그 도둑고양이를 잡아 왔구려! 병아리도 무사하오!','고맙소, 정말 고맙소. 그림 속에서는 내가 담뱃대를 휘두르다 마루에서 굴러떨어졌지만, 그대 덕분에 살았구려.','답례로 이 병아리를 드리리다. 잘 키워 주시오!'],
+      ()=>{const old=prog.pet;prog.pet='chick';saveProg();setPet('chick');makeTags();toast('<b style="color:var(--gold)">병아리</b>가 친구가 되었어요!<br><small style="color:var(--muted)">이제 내 뒤를 졸졸 따라다녀요</small>',2600);setFlag('yamyo_reward');if(old&&old!=='chick')addAnimal(old,Math.floor(player.x/T)+1,Math.floor(player.y/T))});
+    return;
   }
+  if(prog.flags.yamyo_on){openDialog('주인 영감',['아직 못 잡았소? 검은 들고양이가 병아리를 물고 마을 여기저기로 도망 다니고 있소!','가까이 가서 Space 키로 붙잡아 내게 데려와 주시오.']);return}
+  openDialog('주인 영감',['아이고, 아이고! 들고양이가 병아리를 물고 달아났소!',...INFO.yamyo.lines,'내가 담뱃대를 휘두르다 마루에서 굴러떨어지는 바람에 놓쳤지 뭐요. 저 고양이 좀 잡아 와 주시겠소?','잡아 오면 귀여운 병아리 한 마리를 드리리다!'],
+    ()=>{prog.flags.yamyo_on=true;saveProg();spawnYamyoCat();toast('<b style="color:var(--gold)">퀘스트 시작!</b> 병아리를 문 검은 고양이를 잡아 주인에게 데려가요',3000)});
+}
+function spawnYamyoCat(){
+  const late=MAPS.late;if(!late.built)return;
+  if(late.animals.some(a=>a.quest))return;
+  const keep=MAP;useMap(late);
+  addAnimal('blackcat',34,34,{quest:true,catchable:false,fast:true});
+  useMap(keep);
 }
 function talkCourt(n){
   n.dir={down:'up',up:'down',left:'right',right:'left'}[player.dir];
@@ -1218,8 +1881,41 @@ function talkCourt(n){
   qs.forEach((k,i)=>lines.push({...QUIZ[k],key:k,court:true,last:i===qs.length-1}));
   openDialog('정조',lines);
 }
+function shoutYaho(){
+  if(yahoBusy)return;yahoBusy=true;
+  floatText('야호~!',player.x,player.y-SH-6,1800,'big');
+  [[600,'야호~…',-40,-30],[1200,'…야호…',50,-50],[1800,'……야호……',-20,-70]].forEach(([t,s,dx,dy])=>setTimeout(()=>floatText(s,player.x+dx,player.y+dy,1600,'echo'),t));
+  setTimeout(()=>{yahoBusy=false;
+    if(!prog.flags.yaho){openDialog('메아리',['야호~ 야호~ 인왕산이 대답했어요!','정선이 그린 인왕산의 꼭대기에 올라 크게 외쳤어요. 겸재 정선의 붓을 얻었어요!'],()=>setFlag('yaho'))}
+  },2400);
+}
+let yahoBusy=false;
+function interact(){
+  if(bagOpen){toggleBag(false);return}
+  if(towerOpen||designOpen||jarOpen)return;
+  if(dialog){advanceDialog();return}
+  const t=findTarget();if(!t)return;
+  if(t.kind==='animal'){
+    const a=t.a;
+    if(a.quest){const i=ANIMALS.indexOf(a);if(i>=0)ANIMALS.splice(i,1);prog.flags.yamyo_got=true;saveProg();
+      const keepPet=pet;pet={kind:'blackcat',quest:true,x:a.x,y:a.y,dir:'left',walk:0,sheet:animalSheet('blackcat'),name:'잡은 고양이',prev:keepPet};makeTags();
+      toast('검은 고양이를 잡았어요!<br><small style="color:var(--muted)">주인 영감에게 데려가요</small>',2600);return}
+    adopt(a);return;
+  }
+  if(t.kind==='pet'){const s={rabbit:'(코를 씰룩씰룩)',dog:'멍멍!',cat:'냐옹~',chick:'삐약삐약!',blackcat:'캬악!'}[pet.kind];floatText(s,pet.x,pet.y-18,1200);return}
+  if(t.kind==='npc'){if(t.n.talk)t.n.talk(t.n);return}
+  const key=t.p.key;
+  if(key==='tower'){openTower();return}
+  if(key==='peak'){shoutYaho();return}
+  const i=INFO[key];if(!i)return;
+  const lines=i.lines.slice(), qz=QUIZ[key];
+  if(qz&&!prog.quiz[key])lines.push({...qz,key});
+  else if(qz)lines.push('이곳의 퀴즈는 이미 맞혔어요! 가방에서 받은 아이템을 확인해 보세요.');
+  openDialog(i.who,lines);
+  setFlag('read_'+key);
+}
 let typeTimer=null;
-function openDialog(who,lines){dialog={who,lines,i:0,typing:false};$('#dialog').style.display='block';$('#help').style.visibility='hidden';showLine()}
+function openDialog(who,lines,onEnd){dialog={who,lines,i:0,typing:false,onEnd};$('#dialog').style.display='block';$('#help').style.visibility='hidden';showLine()}
 function showLine(){
   const d=dialog, box=$('#dialog .txt'), chs=$('#dialog .choices');$('#dialog .who').textContent=d.who;
   chs.innerHTML='';clearInterval(typeTimer);
@@ -1248,7 +1944,7 @@ function answerQuiz(ci){
 }
 function advanceDialog(){
   const d=dialog;if(!d||d.quiz)return;if(d.typing){clearInterval(typeTimer);$('#dialog .txt').textContent=d.lines[d.i];d.typing=false;return}
-  d.i++;if(d.i>=d.lines.length)closeDialog();else showLine();
+  d.i++;if(d.i>=d.lines.length){const cb=d.onEnd;closeDialog();if(cb)cb()}else showLine();
 }
 function closeDialog(){dialog=null;clearInterval(typeTimer);$('#dialog .choices').innerHTML='';$('#dialog').style.display='none';$('#help').style.visibility=''}
 $('#dialog').addEventListener('click',advanceDialog);
@@ -1257,7 +1953,8 @@ $('#dialog').addEventListener('click',advanceDialog);
 const KEYMAP={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',w:'up',s:'down',a:'left',d:'right',W:'up',S:'down',A:'left',D:'right'};
 addEventListener('keydown',e=>{
   if(!running)return;
-  if(towerOpen){if(e.key==='Escape')closeTower();return}
+  if(towerOpen||designOpen){if(e.key==='Escape'){closeTower();closeDesign()}return}
+  if(jarOpen){if(e.key===' '||e.key==='Enter'){if(!e.repeat)jarHit();e.preventDefault()}else if(e.key==='Escape')closeJar();return}
   if(KEYMAP[e.key]){keys[KEYMAP[e.key]]=performance.now();e.preventDefault()}
   if(e.key==='Shift')keys.run=true;
   if(dialog&&dialog.quiz&&/^[1-9]$/.test(e.key)){const k=+e.key-1;if(k<dialog.order.length)answerQuiz(dialog.order[k]);e.preventDefault();return}
@@ -1274,15 +1971,16 @@ document.querySelectorAll('#pad button').forEach(b=>{
   const on=e=>{e.preventDefault();keys[d]=performance.now()}, off=e=>{e.preventDefault();delete keys[d]};
   b.addEventListener('pointerdown',on);b.addEventListener('pointerup',off);b.addEventListener('pointerleave',off);b.addEventListener('pointercancel',off);
 });
-$('#actBtn').addEventListener('pointerdown',e=>{e.preventDefault();interact()});
+$('#actBtn').addEventListener('pointerdown',e=>{e.preventDefault();if(jarOpen)jarHit();else interact()});
 addEventListener('resize',()=>{if(running)resize();drawStars()});
 
 /* ── 갱신 ── */
+const busy=()=>dialog||bagOpen||towerOpen||designOpen||jarOpen||switching;
 function update(dt){
-  // 가장 최근에 누른 방향키를 따른다 (옛날 RPG처럼 4방향 이동)
+  animT+=dt;
   let dir=null,best=-1;for(const d of DIRS)if(keys[d]&&keys[d]>best){best=keys[d];dir=d}
   player.moving=false;
-  if(dir&&!dialog&&!bagOpen&&!towerOpen){
+  if(dir&&!busy()){
     player.dir=dir;
     const sp=(keys.run?105:64)*dt, v={down:[0,1],up:[0,-1],left:[-1,0],right:[1,0]}[dir];
     const nx=player.x+v[0]*sp, ny=player.y+v[1]*sp;
@@ -1296,7 +1994,37 @@ function update(dt){
     }
     player.walk+=dt*(keys.run?11:7.5);
   }else player.walk=0;
+  // 다른 지도로 가는 길
+  if(!switching){const tx=Math.floor(player.x/T), ty=Math.floor((player.y-3)/T);
+    for(const p of PORTALS)if(tx>=p.x0&&tx<=p.x1&&ty>=p.y0&&ty<=p.y1){
+      const tx2=p.tx>200?p.tx:p.tx*T, ty2=p.ty>200?p.ty:p.ty*T;enterMap(p.to,tx2,ty2,p.dir);break}}
   waterT+=dt;
+  // 따라오는 애완동물
+  const last=trail[trail.length-1];
+  if(!last||Math.hypot(last[0]-player.x,last[1]-player.y)>2)trail.push([player.x,player.y]);
+  if(trail.length>40)trail.shift();
+  if(pet){const tgt=trail.length>9?trail[trail.length-9]:[player.x-12,player.y];
+    const dx=tgt[0]-pet.x, dy=tgt[1]-pet.y, d=Math.hypot(dx,dy);
+    if(d>3){const k=Math.min(1,dt*7);pet.x+=dx*k;pet.y+=dy*k;pet.walk+=dt*8;if(Math.abs(dx)>1)pet.dir=dx<0?'left':'right'}else pet.walk=0;}
+  // 돌아다니는 동물: 평소엔 어슬렁, 가까이 가면 도망
+  for(const a of ANIMALS){
+    if(a.hidden)continue;
+    a.t-=dt;
+    const pdx=a.x-player.x, pdy=a.y-player.y, pd=Math.hypot(pdx,pdy);
+    const scared=(a.catchable||a.quest)&&pd<(a.quest?80:56);
+    let sp=0;
+    if(scared){sp=a.quest?78:a.kind==='dog'?52:a.kind==='rabbit'?74:66;a.mv=[pdx/(pd||1),pdy/(pd||1)]}
+    else{if(a.t<0){a.t=1+Math.random()*2.5;const r=Math.random();a.mv=r<.4?[0,0]:[Math.cos(r*20),Math.sin(r*20)]}sp=a.kind==='turtle'?6:a.quest?40:20}
+    if(sp&&(a.mv[0]||a.mv[1])){
+      const nx=a.x+a.mv[0]*sp*dt, ny=a.y+a.mv[1]*sp*dt;
+      if(!tileBlocked(nx,a.y,8,4))a.x=nx;else if(scared)a.mv[1]+=(Math.random()-.5);else a.t=0;
+      if(!tileBlocked(a.x,ny,8,4))a.y=ny;else if(scared)a.mv[0]+=(Math.random()-.5);else a.t=0;
+      a.walk+=dt*8;if(Math.abs(a.mv[0])>.15)a.dir=a.mv[0]<0?'left':'right';
+    }else a.walk=0;
+  }
+  // 오가는 사람(보따리 인 여인)
+  for(const n of NPCS)if(n.patrol){const p=n.patrol;n.x+=(n.dir==='left'?-1:1)*p.sp*dt;n.walk+=dt*6;if(n.x<p.x0)n.dir='right';if(n.x>p.x1)n.dir='left'}
+  // 다른 사람들
   for(const o of net.others.values()){
     if(!o.seen)continue;
     const dx=o.tx-o.x, dy=o.ty-o.y, dist=Math.hypot(dx,dy);
@@ -1304,56 +2032,85 @@ function update(dt){
     if(o.moving||dist>1)o.walk+=dt*7.5;else o.walk=0;
   }
   sendPos(false);
-  // 규장각 앞 말풍선
-  courtT+=dt;
-  const ti=Math.floor(courtT/3.4)%TALK.length, [who,txt]=TALK[ti];
-  for(const n of NPCS)if(n.bubble){const on=n.id===who&&!dialog;if(on&&n.bubble.textContent!==txt)n.bubble.textContent=txt;n.bubble.style.display=on?'':'none'}
-  // 지금 있는 구역
-  const tx=player.x/T, ty=player.y/T;
-  const place = ty<17? (tx<20?'조선 초기 전시실 앞':tx>=35?'규장각 · 부용지':'마을 북쪽 길') : ty>27? (tx<20?'조선 중기 전시실 앞':tx>36?'조선 후기 전시실 앞':'마을 남쪽 길') : (tx>20&&tx<35?'마을 광장':'마을 큰길');
-  if(place!==curPlace){curPlace=place;$('#hudPlace').textContent=place;if(VISIT_PLACES.includes(place))setFlag('visit_'+place)}
+  // 말풍선: 무리 대화는 차례대로, 혼잣말은 가끔씩
+  const near=n=>Math.abs(n.x-player.x)<VW*.6&&Math.abs(n.y-player.y)<VH*.6;
+  for(const g of GROUPS){const ti=Math.floor(animT/3.4)%g.lines.length;g.cur=g.lines[ti]}
+  for(const n of NPCS){if(!n.bubble)continue;let txt=null;
+    if(!dialog&&near(n)){
+      const g=GROUPS.find(g=>g.lines.some(l=>l[0]===n.id));
+      if(g){if(g.cur[0]===n.id)txt=g.cur[1]}
+      else if(n.chat){const cyc=Math.floor((animT+n.ph*1.7)/7);if(((animT+n.ph*1.7)%7)<3.4)txt=n.chat[cyc%n.chat.length]}
+    }
+    if(txt){if(n.bubble.textContent!==txt)n.bubble.textContent=txt;n.bubble.style.display=''}else n.bubble.style.display='none';
+  }
+  // 지금 있는 곳 (가까운 이름표)
+  if(Math.floor(animT*3)!==Math.floor((animT-dt)*3)){
+    let bestO=null,bd=150;for(const o of objects)if(o.label){const d=Math.hypot(o.x-player.x,(o.y-20)-player.y);if(d<bd){bd=d;bestO=o}}
+    const place=bestO?bestO.label+' 근처':MAP.name;
+    if(place!==curPlace){curPlace=place;$('#hudPlace').textContent=place}
+  }
 }
 
 /* ── 그리기 ── */
 function drawActor(a,frame){
-  vx.fillStyle='rgba(0,0,0,.28)';pell(vx,Math.round(a.x-cam.x),Math.round(a.y-cam.y)-1,6,2,'rgba(0,0,0,.25)');
-  vx.drawImage(a.sheet[a.dir][frame],Math.round(a.x-SW/2-cam.x),Math.round(a.y-SH+1-cam.y));
+  const spr=a.sheet[a.dir][frame]||a.sheet[a.dir][0];
+  let ox=0, oy=a.oy||0;const tt=animT+(a.ph||0);
+  if(a.anim==='work')oy+=Math.round(Math.sin(tt*5));
+  if(a.anim==='push')ox+=Math.round(Math.sin(tt*2.6)*2)*(a.pushDir||1);
+  if(a.anim==='swing'){
+    const s=a.sw, ang=Math.sin(tt*1.8)*.55, sx=s.ax+Math.sin(ang)*s.len, sy=s.ay+Math.cos(ang)*s.len;
+    a.swx=sx-a.x;
+    vx.fillStyle='#8a6a3a';
+    for(const off of [-5,5]){const x0=s.ax+off-cam.x,y0=s.ay-cam.y,x1=sx+off-cam.x,y1=sy-cam.y,n=Math.ceil(Math.hypot(x1-x0,y1-y0));
+      for(let i=0;i<=n;i+=1)vx.fillRect(Math.round(x0+(x1-x0)*i/n),Math.round(y0+(y1-y0)*i/n),1,1)}
+    vx.fillStyle='#6b4a2f';vx.fillRect(Math.round(sx-7-cam.x),Math.round(sy-cam.y),14,2);
+    vx.drawImage(spr,Math.round(sx-spr.width/2-cam.x),Math.round(sy-spr.height+1-cam.y));
+    return;
+  }
+  const X=Math.round(a.x-spr.width/2-cam.x+ox), Y=Math.round(a.y-spr.height+1-cam.y+oy);
+  if(!a.oy&&!a.noShadow)pell(vx,Math.round(a.x-cam.x),Math.round(a.y-cam.y)-1,Math.min(6,spr.width/3|0),2,'rgba(0,0,0,.25)');
+  if(a.seated){const h=spr.height-7;vx.drawImage(spr,0,0,spr.width,h,X,Y+7,spr.width,h)}
+  else vx.drawImage(spr,X,Y);
 }
 const cam={x:0,y:0};
 function render(){
   const mapW=MW*T,mapH=MH*T;
   cam.x=Math.round(Math.max(0,Math.min(mapW-VW,player.x-VW/2)));cam.y=Math.round(Math.max(0,Math.min(mapH-VH,player.y-12-VH/2)));
   if(VW>mapW)cam.x=Math.round((mapW-VW)/2);if(VH>mapH)cam.y=Math.round((mapH-VH)/2);
-  vx.imageSmoothingEnabled=false;vx.fillStyle='#1d3b22';vx.fillRect(0,0,VW,VH);
+  vx.imageSmoothingEnabled=false;vx.fillStyle=MAP.bg;vx.fillRect(0,0,VW,VH);
   vx.drawImage(groundCanvas,-cam.x,-cam.y);
-  // 물결 반짝임
   const x0=Math.max(0,cam.x/T|0),x1=Math.min(MW-1,(cam.x+VW)/T|0),y0=Math.max(0,cam.y/T|0),y1=Math.min(MH-1,(cam.y+VH)/T|0);
-  vx.fillStyle='rgba(255,255,255,.7)';
-  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(ground[y][x]==='W'){
-    const ph=(waterT*1.6+x*.7+y*1.3)%3;if(ph<.5){vx.fillRect(x*T+((x*7+y*3)%10)+3-cam.x,y*T+((x*5+y*11)%9)+4-cam.y,3,1)}}
+  // 물결 반짝임 · 꿈결 안개
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const g=ground[y][x];
+    if(g==='W'){const ph=(waterT*1.6+x*.7+y*1.3)%3;if(ph<.5){vx.fillStyle='rgba(255,255,255,.7)';vx.fillRect(x*T+((x*7+y*3)%10)+3-cam.x,y*T+((x*5+y*11)%9)+4-cam.y,3,1)}}
+    else if(g==='M'&&(x*3+y*5)%7===0){vx.fillStyle='rgba(255,255,255,.35)';vx.fillRect(Math.round(x*T+((waterT*6+x*13)%24)-4-cam.x),y*T+6-cam.y,10,2)}}
   // Y 정렬해서 그린다
   const list=[];
   for(const o of objects){if(o.x+o.spr.width/2<cam.x||o.x-o.spr.width/2>cam.x+VW||o.y-o.spr.height>cam.y+VH||o.y<cam.y)continue;list.push(o)}
   list.push({actor:player,y:player.y});for(const n of NPCS)list.push({actor:n,y:n.y});
-  for(const o of net.others.values())if(o.seen)list.push({actor:o,y:o.y});
+  for(const a of ANIMALS)if(!a.hidden)list.push({actor:a,y:a.y});
+  if(pet)list.push({actor:pet,y:pet.y});
+  for(const o of net.others.values())if(o.seen&&o.map===MAP.id)list.push({actor:o,y:o.y});
   list.sort((a,b)=>a.y-b.y);
   const pf=player.moving?[1,0,2,0][Math.floor(player.walk)%4]:0;
   for(const o of list){
-    if(o.actor)drawActor(o.actor,o.actor===player?pf:o.actor.walk?[1,0,2,0][Math.floor(o.actor.walk)%4]:0);
+    const a=o.actor;
+    if(a){const isAnimal=a.sheet&&a.sheet.left&&a.sheet.left.length===2;
+      drawActor(a,a===player?pf:isAnimal?(a.walk?Math.floor(a.walk)%2:0):a.walk?[1,0,2,0][Math.floor(a.walk)%4]:0)}
     else vx.drawImage(o.spr,Math.round(o.x-o.spr.width/2-cam.x),Math.round(o.y-o.spr.height-cam.y));
   }
-  // 이름표 위치
-  for(const o of net.others.values())o.tag.style.visibility=o.seen?'':'hidden';
+  for(const o of net.others.values())o.tag.style.visibility=(o.seen&&o.map===MAP.id)?'':'hidden';
   for(const t of tags){const [wx,wy]=t.getPos();t.el.style.left=(wx-cam.x)*SCALE+'px';t.el.style.top=(wy-cam.y)*SCALE+'px'}
-  // 살펴보기 표시
-  const tg=!dialog&&findTarget();
-  if(tg){pressTag.style.display='block';pressTag.textContent=document.body.classList.contains('touch')?'살펴보기':'Space';pressPos=[player.x,player.y-SH-12]}
+  const tg=!busy()&&findTarget();
+  if(tg){pressTag.style.display='block';pressTag.textContent=tg.kind==='animal'?(tg.a.quest?'잡기!':'친구 하기'):document.body.classList.contains('touch')?'살펴보기':'Space';pressPos=[player.x,player.y-SH-12]}
   else pressTag.style.display='none';
   // 미니맵
   const mm=$('#mini'),mx=mm.getContext('2d');mx.imageSmoothingEnabled=false;mx.drawImage(miniBase,0,0,MW*3,MH*3);
   mx.strokeStyle='rgba(255,255,255,.8)';mx.strokeRect(cam.x/T*3+.5,cam.y/T*3+.5,VW/T*3,VH/T*3);
-  mx.fillStyle='#9fe3ff';for(const n of NPCS)mx.fillRect(n.x/T*3-2,n.y/T*3-3,4,4);
-  mx.fillStyle='#d6ffcf';for(const o of net.others.values())if(o.seen)mx.fillRect(o.x/T*3-2,o.y/T*3-3,4,4);
+  mx.fillStyle='#9fe3ff';for(const n of NPCS)mx.fillRect(n.x/T*3-1,n.y/T*3-2,3,3);
+  mx.fillStyle='#ff5ad0';for(const a of ANIMALS)if(a.quest&&!a.hidden)mx.fillRect(a.x/T*3-2,a.y/T*3-2,4,4);
+  mx.fillStyle='#d6ffcf';for(const o of net.others.values())if(o.seen&&o.map===MAP.id)mx.fillRect(o.x/T*3-2,o.y/T*3-3,4,4);
+  mx.fillStyle='#ffd34d';for(const p of PORTALS)mx.fillRect(p.x0*3,p.y0*3,(p.x1-p.x0+1)*3,(p.y1-p.y0+1)*3);
   mx.fillStyle=Math.floor(waterT*3)%2?'#fff7a8':'#ff5a3c';mx.fillRect(player.x/T*3-2,player.y/T*3-3,5,5);
 }
 function loop(t){
@@ -1385,24 +2142,49 @@ const ITEMS = {
   brush:    {name:'화원의 붓',       desc:'조선의 화원들이 쓰던 붓이에요. 먹의 진하고 옅음(농담)으로 산과 물, 사람을 그렸어요.'},
   palette:  {name:'화가의 팔레트',   desc:'물감을 덜어 섞는 접시예요. 화원들은 광물과 식물에서 얻은 안료를 아교에 개어 채색했어요.'},
   buncheong:{name:'분청사기 항아리', desc:'회색 흙그릇에 흰 흙을 바르고 긁거나 그려서 꾸민 그릇이에요. 조선 초기에 널리 쓰였어요.'},
-  mukjuk:   {name:'묵죽 족자',       desc:'먹으로 그린 대나무 족자예요. 곧게 뻗은 대나무는 선비의 굳은 절개를 뜻했어요.'},
-  moonjar:  {name:'달항아리',        desc:'보름달처럼 둥글고 흰 큰 백자 항아리예요. 조선 후기 백자의 넉넉한 아름다움을 보여 줘요.'},
-  book:     {name:'규장각 책',       desc:'규장각에서 펴내고 보관한 책이에요. 정조와 학자들은 이곳에서 많은 책을 펴냈어요.'},
+  gwiyal:   {name:'분청 귀얄',       desc:'풀이나 털을 묶어 만든 넓적한 솔이에요. 분청사기에 흰 흙을 쓱쓱 바를 때 썼어요(귀얄 기법).'},
+  peach:    {name:'도원의 복숭아',   desc:'안평대군이 꿈에서 본 도원에는 복숭아꽃이 가득했어요. 「몽유도원도」의 이상향을 기억하는 열매예요.'},
+  fan:      {name:'선비의 부채',     desc:'「고사관수도」의 선비처럼 물을 바라보며 마음을 식혀 주는 부채예요.'},
   rubbing:  {name:'석탑 부조 탁본',   desc:'원각사지 십층석탑의 부조를 종이에 떠낸 탁본이에요. 종이를 대고 먹방망이로 두드려 무늬를 옮겨요.'},
+  mukjuk:   {name:'묵죽 족자',       desc:'먹으로 그린 대나무 족자예요. 곧게 뻗은 대나무는 선비의 굳은 절개를 뜻했어요.'},
+  bamboo:   {name:'대나무 막대기',   desc:'이정의 「풍죽도」처럼 바람에 휘어도 꺾이지 않는 대나무예요. 손에 들 수 있어요.'},
   pungyeong:{name:'풍경(風磬)',      desc:'절 건물의 처마 끝에 다는 작은 종이에요. 물고기 모양 추가 바람에 흔들리며 맑은 소리를 내요.'},
+  cheonghwa:{name:'내가 만든 청화백자', desc:'분원에서 직접 무늬를 그려 구운 청화백자예요. 하얀 바탕에 푸른 그림이 시원해요.'},
+  dalma:    {name:'김명국의 달마도', desc:'조선 중기 화원 김명국이 거침없는 붓질 몇 번으로 그린 달마 그림이에요. 펼쳐 보면 달마가 말을 걸어요!'},
+  moonjar:  {name:'달항아리',        desc:'보름달처럼 둥글고 흰 큰 백자 항아리예요. 조선 후기 백자의 넉넉한 아름다움을 보여 줘요.'},
+  bigjar:   {name:'내가 붙인 달항아리', desc:'위아래 두 사발을 맞붙여 만든 큰 달항아리예요. 가운데 이음새와 살짝 비뚤어진 모양이 멋이에요.'},
+  jinkyeong:{name:'진경산수 화첩',   desc:'정선처럼 우리 산천을 직접 보고 그린 그림을 모은 화첩이에요.'},
+  gyeomjae: {name:'겸재의 붓',       desc:'인왕산 꼭대기에서 외친 메아리에 대한 답례로 받은 겸재 정선의 붓이에요. 손에 들 수 있어요.'},
+  book:     {name:'규장각 책',       desc:'규장각에서 펴내고 보관한 책이에요. 정조와 학자들은 이곳에서 많은 책을 펴냈어요.'},
   eosahwa:  {name:'어사화(御賜花)',   desc:'과거에 급제한 사람에게 임금이 내려 준 종이꽃 장식이에요. 모자 뒤에 꽂아 양옆으로 길게 늘어뜨렸어요.'},
+  hol:      {name:'홀(笏)',          desc:'신하들이 임금 앞에서 두 손으로 받쳐 들던 길쭉한 판이에요. 손에 들 수 있어요.'},
+  shell:    {name:'거북 등껍질',     desc:'십장생의 거북에게 받은 등껍질이에요. 가방처럼 등에 멜 수 있어요.'},
+  changpo:  {name:'창포',            desc:'단옷날 창포 삶은 물에 머리를 감으면 머리카락이 윤이 나고 나쁜 기운을 쫓는다고 믿었어요.'},
+  yeot:     {name:'엿',              desc:'김홍도의 「씨름」 한쪽에서 엿장수 아이가 팔던 달콤한 엿이에요.'},
   hammer:   {name:'화공의 망치',      desc:'나만의 탑을 끝까지 쌓아 올린 장인에게 주는 망치예요. 돌을 다듬고 나무를 맞추는 데 썼어요.'},
-  map:      {name:'마을 탐험 지도',   desc:'세 전시실과 규장각을 모두 찾아간 탐험가에게 주는 지도예요.'},
+  map:      {name:'시대 여행 지도',   desc:'조선 초기, 중기, 후기 마을을 모두 여행한 사람에게 주는 지도예요.'},
   knot:     {name:'우정 매듭',       desc:'전통 매듭 공예로 엮은 매듭이에요. 함께 모험한 친구를 기억하게 해 줘요.'},
   medal:    {name:'미술사 박사 메달', desc:'마을의 모든 퀴즈를 맞힌 사람만 받을 수 있는 메달이에요. 정말 대단해요!'},
 };
 const QUIZ = {
   early:  {q:'안견이 안평대군의 꿈 이야기를 듣고 그린 그림은 무엇일까요?', choices:['몽유도원도','인왕제색도','세한도'], answer:0,
            explain:'「몽유도원도」는 꿈에서 본 복숭아꽃 이상향을 그린 조선 초기의 산수화예요.'},
+  wongaksa:{q:'원각사지 십층석탑은 어떤 돌로 만들었을까요?', choices:['대리석','화강암','벽돌'], answer:0, explain:'흰 대리석이라 섬세한 부조를 새길 수 있었어요.'},
+  buncheong_shop:{q:'고려 말, 청자 대신 분청사기가 생겨난 까닭으로 알맞은 것은?', choices:['왜구의 침입으로 바닷가 청자 가마가 무너지고 도공들이 흩어져서','중국에서 분청사기를 많이 들여와서','임금이 청자를 쓰지 못하게 해서'], answer:0,
+           explain:'흩어진 도공들이 지방의 흙으로 그릇을 빚고 흰 흙을 발라 꾸미면서 분청사기가 생겨났어요.'},
+  gosa:   {q:'강희안의 「고사관수도」 속 선비는 무엇을 하고 있을까요?', choices:['바위에 기대어 물을 바라본다','소를 타고 피리를 분다','나무 아래서 책을 읽는다'], answer:0,
+           explain:'물을 바라보며 마음을 맑게 하는 선비의 모습이에요.'},
   middle: {q:'조선 중기에 철 성분 안료로 갈색 무늬를 그린 백자는 무엇일까요?', choices:['철화백자','청화백자','분청사기'], answer:0,
            explain:'푸른 안료가 귀해지자 갈색을 내는 철화 안료로 무늬를 그렸어요.'},
+  palsangjeon:{q:'법주사 팔상전은 몇 층짜리 목탑일까요?', choices:['5층','3층','10층'], answer:0, explain:'팔상전은 우리나라에 하나뿐인 5층 목탑이에요.'},
+  ijeong: {q:'사군자에 들어가지 않는 식물은 무엇일까요?', choices:['소나무','매화','난초','대나무'], answer:0,
+           explain:'사군자는 매화·난초·국화·대나무예요. 선비의 곧은 마음을 상징하지요.'},
+  baekja_shop:{q:'조선 왕실에서 쓸 백자를 만들던 관청 가마(분원)는 어디에 있었을까요?', choices:['경기도 광주','전라도 강진','전라도 부안'], answer:0,
+           explain:'경기도 광주의 분원에서 왕실의 백자를 구웠어요. 강진과 부안은 고려청자로 유명한 곳이에요.'},
   late:   {q:'정선이 우리나라의 실제 경치를 보고 그린 그림을 무엇이라고 할까요?', choices:['진경산수화','묵죽도','달마도'], answer:0,
            explain:'「인왕제색도」, 「금강전도」가 대표적인 진경산수화예요.'},
+  jeongseon:{q:'「인왕제색도」의 \'제색(霽色)\'은 어떤 경치를 말할까요?', choices:['비가 갠 뒤의 경치','눈 내린 밤 경치','노을 진 저녁 경치'], answer:0,
+           explain:'여름비가 그친 뒤, 젖은 바위가 검게 빛나는 인왕산을 그렸어요.'},
   kyujang:{q:'창덕궁 후원에 규장각을 세운 조선의 왕은 누구일까요?', choices:['정조','세종','태조'], answer:0,
            explain:'정조는 즉위한 해에 규장각을 세워 학문과 문화를 꽃피웠어요.'},
   gwageo1:{q:'정조가 수원에 새로 쌓은 성의 이름은 무엇일까요?', choices:['수원 화성','남한산성','한양 도성'], answer:0,
@@ -1411,34 +2193,60 @@ const QUIZ = {
            explain:'박제가, 이덕무, 유득공 등이 규장각 검서관으로 일했어요.'},
   gwageo3:{q:'정조의 수원 화성 행차를 도화서 화원들이 그린 8폭 병풍은?', choices:['화성능행도','몽유도원도','인왕제색도'], answer:0,
            explain:'「화성능행도」 병풍에는 행차의 장면이 하나하나 자세히 그려져 있어요.'},
-  wongaksa:{q:'원각사지 십층석탑은 어떤 돌로 만들었을까요?', choices:['대리석','화강암','벽돌'], answer:0,
-           explain:'흰 대리석이라 섬세한 부조를 새길 수 있었어요.'},
-  palsangjeon:{q:'법주사 팔상전은 몇 층짜리 목탑일까요?', choices:['5층','3층','10층'], answer:0,
-           explain:'팔상전은 우리나라에 하나뿐인 5층 목탑이에요.'},
+  geunjeong:{q:'경복궁에서 임금이 신하들의 조회를 받던 가장 큰 건물은?', choices:['근정전','규장각','숭례문'], answer:0, explain:'근정전 앞마당의 품계석을 따라 신하들이 줄지어 섰어요.'},
+  turtle: {q:'십장생에 들어가지 않는 것은 무엇일까요?', choices:['호랑이','거북','학','사슴'], answer:0, explain:'호랑이는 민화에 자주 나오지만 십장생은 아니에요.'},
+  dano:   {q:'「단오풍정」 속 여인들이 단옷날 냇가에서 하는 일은 무엇일까요?', choices:['창포물에 머리 감기','김장하기','연날리기'], answer:0,
+           explain:'단옷날에는 창포물에 머리를 감고 그네를 뛰었어요.'},
+  ssireum:{q:'김홍도의 「씨름」에서 구경꾼들은 어떤 모양으로 둘러앉아 있을까요?', choices:['둥글게 원을 그리며','한 줄로 길게','세모 모양으로'], answer:0,
+           explain:'둥근 구도라서 시선이 가운데 씨름꾼에게 모여요.'},
 };
-const VISIT_PLACES=['조선 초기 전시실 앞','조선 중기 전시실 앞','조선 후기 전시실 앞','규장각 · 부용지'];
 const QUESTS = [
-  {item:'brush',    how:'큐레이터와 이야기하기',            cond:p=>p.flags.talked},
-  {item:'palette',  how:'광장의 화원 서안 살펴보기',        cond:p=>p.flags.read_desk},
-  {item:'buncheong',how:'조선 초기 전시실 퀴즈 맞히기',     cond:p=>p.quiz.early},
-  {item:'mukjuk',   how:'조선 중기 전시실 퀴즈 맞히기',     cond:p=>p.quiz.middle},
-  {item:'moonjar',  how:'조선 후기 전시실 퀴즈 맞히기',     cond:p=>p.quiz.late},
-  {item:'book',     how:'규장각 퀴즈 맞히기',              cond:p=>p.quiz.kyujang},
-  {item:'rubbing',  how:'원각사지 십층석탑 퀴즈 맞히기',    cond:p=>p.quiz.wongaksa},
-  {item:'pungyeong',how:'법주사 팔상전 퀴즈 맞히기',        cond:p=>p.quiz.palsangjeon},
+  {item:'brush',    how:'큐레이터와 이야기하기',              cond:p=>p.flags.talked},
+  {item:'palette',  how:'광장의 화원 서안 살펴보기',          cond:p=>p.flags.read_desk},
+  {item:'buncheong',how:'조선 초기 전시실 퀴즈 맞히기',       cond:p=>p.quiz.early},
+  {item:'gwiyal',   how:'분청사기 가마의 사기장 퀴즈 맞히기',  cond:p=>p.quiz.buncheong_shop},
+  {item:'peach',    how:'몽유도원 길 끝의 도원 찾아가기',     cond:p=>p.flags.read_dowon},
+  {item:'fan',      how:'「고사관수도」 퀴즈 맞히기',          cond:p=>p.quiz.gosa},
+  {item:'rubbing',  how:'원각사지 십층석탑 퀴즈 맞히기',      cond:p=>p.quiz.wongaksa},
+  {item:'hammer',   how:'광장의 짓다 만 탑을 완성하기',       cond:p=>!!p.tower},
+  {item:'mukjuk',   how:'조선 중기 전시실 퀴즈 맞히기',       cond:p=>p.quiz.middle},
+  {item:'bamboo',   how:'대청마루의 이정 퀴즈 맞히기',        cond:p=>p.quiz.ijeong},
+  {item:'pungyeong',how:'법주사 팔상전 퀴즈 맞히기',          cond:p=>p.quiz.palsangjeon},
+  {item:'cheonghwa',how:'분원에서 청화백자 디자인하기',        cond:p=>p.flags.design},
+  {item:'dalma',    how:'분원에서 청화백자 디자인하기',        cond:p=>p.flags.design},
+  {item:'moonjar',  how:'조선 후기 전시실 퀴즈 맞히기',       cond:p=>p.quiz.late},
+  {item:'bigjar',   how:'달항아리 도공과 달항아리 붙이기',    cond:p=>p.flags.moonjar_made},
+  {item:'jinkyeong',how:'정자의 정선 퀴즈 맞히기',            cond:p=>p.quiz.jeongseon},
+  {item:'gyeomjae', how:'인왕산 꼭대기에서 야호 외치기',      cond:p=>p.flags.yaho},
+  {item:'book',     how:'규장각 퀴즈 맞히기',                cond:p=>p.quiz.kyujang},
   {item:'eosahwa',  how:'규장각 앞 정조의 과거 문제 3개 모두 맞히기', cond:p=>p.quiz.gwageo1&&p.quiz.gwageo2&&p.quiz.gwageo3},
-  {item:'hammer',   how:'광장의 짓다 만 탑을 완성하기',     cond:p=>!!p.tower},
-  {item:'map',      how:'세 전시실과 규장각에 모두 가 보기',  cond:p=>VISIT_PLACES.every(k=>p.flags['visit_'+k])},
-  {item:'knot',     how:'방 코드로 들어가 친구와 함께 있기',  cond:p=>p.flags.friend},
-  {item:'medal',    get how(){return `마을의 퀴즈 ${Object.keys(QUIZ).length}개 모두 맞히기`},       cond:p=>Object.keys(QUIZ).every(k=>p.quiz[k])},
+  {item:'hol',      how:'근정전의 임금 퀴즈 맞히기',          cond:p=>p.quiz.geunjeong},
+  {item:'shell',    how:'십장생도 앞 거북의 퀴즈 맞히기',     cond:p=>p.quiz.turtle},
+  {item:'changpo',  how:'「단오풍정」 여인의 퀴즈 맞히기',     cond:p=>p.quiz.dano},
+  {item:'yeot',     how:'「씨름」 구경꾼이나 엿장수 퀴즈 맞히기', cond:p=>p.quiz.ssireum},
+  {item:'map',      how:'조선 초기·중기·후기 마을 모두 가 보기', cond:p=>p.flags.map_early&&p.flags.map_middle&&p.flags.map_late},
+  {item:'knot',     how:'방 코드로 들어가 친구와 함께 있기',   cond:p=>p.flags.friend},
+  {item:'medal',    get how(){return `마을의 퀴즈 ${Object.keys(QUIZ).length}개 모두 맞히기`}, cond:p=>Object.keys(QUIZ).every(k=>p.quiz[k])},
 ];
 
 // 몸에 착용할 수 있는 아이템: hand(손에 들기, 하나만) / neck(목에 걸기)
-const EQUIP = {brush:'hand', palette:'hand', hammer:'hand', medal:'neck', eosahwa:'head'};
-const EQUIP_VERB = {hand:['손에 들기','내려놓기'], neck:['목에 걸기','벗기'], head:['머리에 쓰기','벗기']};
+const EQUIP = {brush:'hand', palette:'hand', hammer:'hand', bamboo:'hand', gyeomjae:'hand', hol:'hand', medal:'neck', eosahwa:'head', shell:'back'};
+const EQUIP_VERB = {hand:['손에 들기','내려놓기'], neck:['목에 걸기','벗기'], head:['머리에 쓰기','벗기'], back:['등에 메기','내려놓기']};
 
 /* ── 아이템 그림 (16×16 도트) ── */
 const ICON_DRAW = {
+  gwiyal:(P)=>{P(7,1,2,8,'#a8743f');P(4,9,8,5,'#c9a45a');for(let i=4;i<12;i+=2)P(i,12,1,3,'#8a6a3a');P(4,9,8,1,'#8a6a3a')},
+  peach:(P)=>{pcirc(ICTX,8,9,5,'#f29ab0');pcirc(ICTX,7,8,3,'#f7c0cc');P(8,4,1,5,'#d9708a');P(8,2,1,2,'#6b4a2f');P(9,2,4,2,'#4f9a3c')},
+  fan:(P)=>{for(let k=0;k<7;k++){const a=-1.1+k*.36;for(let r=2;r<12;r++)P(Math.round(8+Math.sin(a)*r),Math.round(13-Math.cos(a)*r),1,1,k%2?'#f3e6c4':'#e3d3a8')}P(7,12,2,3,'#7a4e2c')},
+  bamboo:(P)=>{for(let y=1;y<15;y++)P(7,y,2,1,y%4===0?'#3f7a32':'#6fae4f');P(9,3,3,1,'#4f9a3c');P(4,6,3,1,'#4f9a3c');P(10,8,3,1,'#4f9a3c')},
+  dalma:(P)=>{P(2,1,12,14,'#f3ecd8');P(2,1,12,1,'#7a4e2c');P(2,14,12,1,'#7a4e2c');P(4,3,8,1,'#1f1f22');P(3,4,1,6,'#1f1f22');P(12,4,1,7,'#1f1f22');P(6,6,1,1,'#1f1f22');P(9,6,1,1,'#1f1f22');P(5,9,6,1,'#3a3a40');P(6,10,4,2,'#6a6a70');P(4,12,8,1,'#1f1f22')},
+  bigjar:(P)=>{pcirc(ICTX,8,9,6,'#f4f1e8');pcirc(ICTX,7,8,4,'#fbf9f3');P(2,9,12,1,'#d9d4c6');P(6,1,4,2,'#ece8dc');P(5,1,6,1,'#d9d4c6')},
+  jinkyeong:(P)=>{P(2,2,12,12,'#ece2c8');P(2,2,12,1,'#7a4e2c');pell(ICTX,8,8,5,4,'#2e3033');P(3,10,10,1,'#f7f2e6');P(4,12,1,2,'#2f5a33');P(11,12,1,2,'#2f5a33')},
+  gyeomjae:(P)=>{for(let i=0;i<9;i++)P(4+i,13-i,1,1,'#5a3a1e');P(12,4,2,1,'#f1ead8');P(12,1,3,3,'#1f1f22');P(3,13,2,2,'#c0392b')},
+  hol:(P)=>{P(6,1,4,14,'#f1ead8');P(6,1,4,1,'#c9c3b8');P(6,14,4,1,'#c9c3b8');P(7,3,2,8,'#e4dccb')},
+  shell:(P)=>{pell(ICTX,8,8,6,6,'#5a7a3a');for(const [a,b] of [[6,5],[9,5],[5,9],[10,9],[7,12]])P(a,b,2,1,'#3f5a28');P(2,8,12,1,'#c9b06a');P(7,7,2,2,'#7a9a4a')},
+  changpo:(P)=>{for(let i=0;i<4;i++){for(let y=2+i;y<15;y++)P(4+i*2+((y>>2)%2),y,1,1,i%2?'#4f9a3c':'#3f7a32')}P(5,14,7,1,'#7a5a3a')},
+  yeot:(P)=>{for(let i=0;i<3;i++){P(4+i*3,2,2,12,'#c98a3a');P(4+i*3,2,1,12,'#e0a85a')}P(3,13,10,2,'#8a6236')},
   brush:(P)=>{for(let i=0;i<9;i++)P(12-i,2+i,2,1,i%3?'#a8743f':'#8a5a2c');P(3,11,2,2,'#e8e2d0');P(2,12,2,2,'#2a2220');P(1,14,2,1,'#2a2220');P(11,2,2,1,'#c0392b')},
   palette:(P)=>{pell(ICTX,8,8,7,5,'#d9b27a');pell(ICTX,8,8,6,4,'#e6c48e');P(4,11,3,2,'rgba(0,0,0,0)');ICTX.clearRect(4,10,3,3);
     P(4,6,2,2,'#c0392b');P(7,5,2,2,'#f0c419');P(10,6,2,2,'#2f6fd0');P(11,9,2,2,'#3f9f5a');P(8,10,2,2,'#ffffff')},
@@ -1459,6 +2267,7 @@ const ICON_DRAW = {
 };
 let ICTX=null;const ICON_CACHE={};
 function itemIcon(id){
+  if(id==='cheonghwa'&&prog.design)return prog.design;
   if(ICON_CACHE[id])return ICON_CACHE[id];
   const c=mkCanvas(16,16);ICTX=c.getContext('2d');
   (ICON_DRAW[id]||((P)=>{P(4,4,8,8,'#c9c3bb')}))((x,y,w,h,col)=>{ICTX.fillStyle=col;ICTX.fillRect(x,y,w,h)});
@@ -1469,7 +2278,8 @@ function itemIcon(id){
 let prog={items:{},flags:{},quiz:{},seen:{},equip:{}};
 function gearLook(){ // 지금 몸에 착용한 것까지 합친 외형
   const e=prog.equip||{};
-  return {...look, hand:(e.hand&&prog.items[e.hand])?e.hand:'none', neck:(e.neck&&prog.items[e.neck])?e.neck:'none', head:(e.head&&prog.items[e.head])?e.head:'none'};
+  const g=k=>(e[k]&&prog.items[e[k]])?e[k]:'none';
+  return {...look, hand:g('hand'), neck:g('neck'), head:g('head'), back:g('back')};
 }
 function applyGear(){
   player.sheet=buildSheet(gearLook());
@@ -1484,7 +2294,7 @@ function toggleEquip(id){
 }
 function loadProg(name){
   try{const s=JSON.parse(localStorage.getItem('ahq-prog-'+name)||'null');
-    if(s&&typeof s==='object')return {items:s.items||{},flags:s.flags||{},quiz:s.quiz||{},seen:s.seen||{},equip:s.equip||{},tower:s.tower||null}}catch(e){}
+    if(s&&typeof s==='object')return {items:s.items||{},flags:s.flags||{},quiz:s.quiz||{},seen:s.seen||{},equip:s.equip||{},tower:s.tower||null,pet:s.pet||null,design:s.design||null}}catch(e){}
   return {items:{},flags:{},quiz:{},seen:{},equip:{}};
 }
 function saveProg(){try{localStorage.setItem('ahq-prog-'+look.name,JSON.stringify(prog))}catch(e){}}
@@ -1534,6 +2344,13 @@ function renderBag(){
     const b=document.createElement('button');b.className='pbtn small equipBtn';b.textContent=EQUIP_VERB[slot][on?1:0];
     b.onclick=()=>toggleEquip(bagSel);info.append(b);
   }
+  if(has&&bagSel==='dalma'){const b=document.createElement('button');b.className='pbtn small equipBtn';b.textContent='펼쳐 보기';b.onclick=()=>{toggleBag(false);talkDalma()};info.append(b)}
+}
+function talkDalma(){
+  openDialog('달마',['허허, 나를 불러냈는가? 나는 달마라네. 남인도에서 태어나 중국으로 건너가 선종(禪宗)을 전한 스님이지.',
+    '숭산 소림사 동굴에서 벽을 마주하고 아홉 해 동안 참선했다는 이야기가 전해진다네. 그래서 부리부리한 눈으로 자주 그려지지.',
+    '이 그림은 조선 중기 화원 김명국이 그렸네. 술을 즐기던 그는 몇 번의 거침없는 붓질만으로 내 모습을 그려 냈지. 이렇게 붓질을 줄여 대담하게 그리는 것을 감필법이라 한다네.',
+    '김명국은 통신사를 따라 일본에도 다녀왔는데, 그곳 사람들이 그의 그림을 무척 아꼈다고 하네. 허허, 그럼 또 보세나.']);
 }
 $('#bagBtn').onclick=()=>toggleBag();
 $('#bagClose').onclick=()=>toggleBag(false);
@@ -1708,6 +2525,142 @@ $('#tNext').onclick=()=>{
 };
 
 /* ════════════════════════════════════════════════
+   8-3. 청화백자 디자인 (미니게임)
+   ════════════════════════════════════════════════ */
+let designOpen=false, dTool='brush', dColor='#1f4fa0', dSize=6, dStamp='dragon', dHist=[], dDrawing=false, dLast=null;
+const DCV=()=>$('#dCanvas');
+function jarPath(x){ // 항아리 모양 (300×360 캔버스)
+  x.beginPath();x.moveTo(118,30);x.lineTo(182,30);x.lineTo(186,52);
+  x.bezierCurveTo(268,80,292,170,250,262);x.bezierCurveTo(236,300,210,322,196,330);x.lineTo(196,344);x.lineTo(104,344);x.lineTo(104,330);
+  x.bezierCurveTo(90,322,64,300,50,262);x.bezierCurveTo(8,170,32,80,114,52);x.closePath();
+}
+function drawJarBase(x){
+  x.clearRect(0,0,300,360);x.save();jarPath(x);const g=x.createLinearGradient(40,0,280,0);g.addColorStop(0,'#e9e5da');g.addColorStop(.35,'#fbfaf5');g.addColorStop(1,'#dcd7ca');x.fillStyle=g;x.fill();x.restore();
+  x.strokeStyle='#bdb7aa';x.lineWidth=2;x.save();jarPath(x);x.stroke();x.restore();
+  x.fillStyle='#e3ded2';x.fillRect(118,28,64,6);
+}
+const STAMPS={
+  dragon:{name:'용',draw:(x)=>{x.lineWidth=5;x.beginPath();x.moveTo(-50,10);x.bezierCurveTo(-30,-30,0,30,20,-10);x.bezierCurveTo(35,-35,50,0,40,15);x.stroke();
+    x.lineWidth=2;for(let i=-40;i<20;i+=8){x.beginPath();x.arc(i,Math.sin(i/12)*14,4,0,Math.PI);x.stroke()}x.beginPath();x.arc(44,8,7,0,Math.PI*2);x.stroke();
+    x.beginPath();x.moveTo(48,2);x.lineTo(60,-8);x.moveTo(50,6);x.lineTo(62,4);x.stroke();x.beginPath();x.arc(-12,-26,6,0,Math.PI*2);x.fill()}},
+  plum:{name:'매화',draw:(x)=>{x.lineWidth=4;x.beginPath();x.moveTo(-40,30);x.lineTo(-10,0);x.lineTo(5,-10);x.lineTo(30,-30);x.moveTo(-10,0);x.lineTo(-20,-25);x.stroke();
+    x.lineWidth=2;for(const [a,b] of [[30,-30],[5,-14],[-20,-28],[-30,20],[15,-22]]){for(let k=0;k<5;k++){const an=k/5*Math.PI*2;x.beginPath();x.arc(a+Math.cos(an)*5,b+Math.sin(an)*5,3.2,0,Math.PI*2);x.stroke()}}}},
+  bamboo:{name:'대나무',draw:(x)=>{x.lineWidth=5;for(const bx of [-10,12]){x.beginPath();x.moveTo(bx,40);x.lineTo(bx,-40);x.stroke();for(let y=-30;y<40;y+=18){x.clearRect?0:0;x.beginPath();x.moveTo(bx-4,y);x.lineTo(bx+4,y);x.lineWidth=2;x.stroke();x.lineWidth=5}}
+    x.lineWidth=3;for(const [a,b,d] of [[12,-30,1],[12,-20,1],[-10,-12,-1],[-10,0,-1],[12,6,1]]){x.beginPath();x.moveTo(a,b);x.quadraticCurveTo(a+d*14,b-6,a+d*26,b+4);x.stroke()}}},
+  cloud:{name:'구름',draw:(x)=>{x.lineWidth=3;x.beginPath();x.arc(-14,0,12,Math.PI*.9,Math.PI*2.1);x.arc(6,-6,14,Math.PI,Math.PI*2.05);x.arc(26,2,10,Math.PI*1.2,Math.PI*.4);x.stroke();
+    x.beginPath();x.moveTo(-26,4);x.quadraticCurveTo(-36,20,-20,22);x.stroke();x.beginPath();x.arc(-6,4,4,0,Math.PI*1.5);x.stroke()}},
+  crane:{name:'학',draw:(x)=>{x.lineWidth=3;x.beginPath();x.ellipse(0,0,22,9,-.3,0,Math.PI*2);x.stroke();x.beginPath();x.moveTo(-18,-4);x.quadraticCurveTo(-30,-30,-14,-34);x.stroke();
+    x.beginPath();x.moveTo(-14,-34);x.lineTo(-2,-32);x.stroke();x.beginPath();x.moveTo(-4,-6);x.lineTo(10,-34);x.lineTo(30,-28);x.moveTo(4,-6);x.lineTo(22,-26);x.stroke();
+    x.beginPath();x.moveTo(4,8);x.lineTo(0,32);x.moveTo(10,6);x.lineTo(12,32);x.stroke()}},
+  band:{name:'띠 무늬',draw:(x)=>{x.lineWidth=3;x.beginPath();x.moveTo(-70,-6);x.lineTo(70,-6);x.moveTo(-70,6);x.lineTo(70,6);x.stroke();x.lineWidth=2;for(let i=-64;i<70;i+=12){x.beginPath();x.arc(i,0,4,0,Math.PI*2);x.stroke()}}},
+};
+function openDesign(){
+  designOpen=true;for(const k in keys)delete keys[k];
+  const ui=$('#designUI');ui.style.display='flex';
+  const x=DCV().getContext('2d');dHist=[];drawJarBase(x);
+  renderDesignTools();
+}
+function closeDesign(){designOpen=false;$('#designUI').style.display='none'}
+function renderDesignTools(){
+  const box=$('#dTools');box.innerHTML='';
+  const grp=(label,items)=>{const g=document.createElement('div');g.className='dGrp';const l=document.createElement('p');l.className='tip';l.textContent=label;g.append(l);const r=document.createElement('div');r.className='dRow';items.forEach(b=>r.append(b));g.append(r);box.append(g)};
+  const btn=(txt,on,fn,sw)=>{const b=document.createElement('button');b.className='topt'+(on?' on':'');b.textContent=txt;if(sw){b.style.borderLeft=`10px solid ${sw}`}b.onclick=()=>{fn();renderDesignTools()};return b};
+  grp('도구',[btn('붓',dTool==='brush',()=>dTool='brush'),btn('무늬 찍기',dTool==='stamp',()=>dTool='stamp')]);
+  grp('청화 안료',[btn('진한 청화',dColor==='#1f4fa0',()=>dColor='#1f4fa0','#1f4fa0'),btn('옅은 청화',dColor==='#6f95d6',()=>dColor='#6f95d6','#6f95d6')]);
+  if(dTool==='brush')grp('붓 굵기',[[3,'가늘게'],[6,'보통'],[12,'굵게']].map(([s,t])=>btn(t,dSize===s,()=>dSize=s)));
+  else grp('무늬 (항아리를 눌러 찍어요)',Object.entries(STAMPS).map(([k,v])=>btn(v.name,dStamp===k,()=>dStamp=k)));
+  const acts=document.createElement('div');acts.className='dRow';
+  const undo=document.createElement('button');undo.className='pbtn sub small';undo.textContent='되돌리기';undo.onclick=()=>{const x=DCV().getContext('2d');const h=dHist.pop();if(h)x.putImageData(h,0,0)};
+  const clr=document.createElement('button');clr.className='pbtn sub small';clr.textContent='모두 지우기';clr.onclick=()=>{const x=DCV().getContext('2d');dHist.push(x.getImageData(0,0,300,360));drawJarBase(x)};
+  const done=document.createElement('button');done.className='pbtn small';done.textContent='가마에 굽기 ★';done.onclick=fireDesign;
+  acts.append(undo,clr,done);box.append(acts);
+}
+function dPos(e){const r=DCV().getBoundingClientRect();return [(e.clientX-r.left)/r.width*300,(e.clientY-r.top)/r.height*360]}
+function dPaint(a,b){const x=DCV().getContext('2d');x.save();jarPath(x);x.clip();x.strokeStyle=dColor;x.fillStyle=dColor;x.lineCap='round';x.lineJoin='round';x.lineWidth=dSize;x.globalAlpha=.9;
+  x.beginPath();x.moveTo(a[0],a[1]);x.lineTo(b[0],b[1]);x.stroke();x.restore()}
+DCV().addEventListener('pointerdown',e=>{e.preventDefault();const x=DCV().getContext('2d');if(dHist.length>20)dHist.shift();dHist.push(x.getImageData(0,0,300,360));
+  const p=dPos(e);
+  if(dTool==='stamp'){x.save();jarPath(x);x.clip();x.translate(p[0],p[1]);x.strokeStyle=dColor;x.fillStyle=dColor;x.lineCap='round';STAMPS[dStamp].draw(x);x.restore();return}
+  dDrawing=true;dLast=p;dPaint(p,[p[0]+.1,p[1]+.1]);DCV().setPointerCapture(e.pointerId)});
+DCV().addEventListener('pointermove',e=>{if(!dDrawing)return;const p=dPos(e);dPaint(dLast,p);dLast=p});
+for(const ev of ['pointerup','pointercancel'])DCV().addEventListener(ev,()=>{dDrawing=false});
+function fireDesign(){
+  const cv=DCV(),x=cv.getContext('2d');
+  // 가마에 구우면 유약이 반짝인다
+  x.save();jarPath(x);x.clip();const g=x.createLinearGradient(60,0,240,0);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(.3,'rgba(255,255,255,.35)');g.addColorStop(.45,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(0,0,300,360);x.restore();
+  const small=mkCanvas(60,72),sx=small.getContext('2d');sx.drawImage(cv,0,0,60,72);
+  prog.design=small.toDataURL('image/png');
+  const first=!prog.flags.design;prog.flags.design=true;saveProg();loadDisplay();
+  $('#dFlash').style.opacity=1;setTimeout(()=>{$('#dFlash').style.opacity=0},500);
+  setTimeout(()=>{closeDesign();
+    openDialog('분원 사기장',['오오, 가마에서 잘 구워졌소! 하얀 바탕에 푸른 그림이 참으로 시원하구려.','그대가 만든 청화백자는 가마 앞 받침대에 올려 두었소.',
+      ...(first?['수고한 답례로 귀한 그림 한 점을 주겠소. 김명국의 「달마도」라오. 가방에서 펼쳐 보면 달마 스님이 말을 걸어올 게요.']:[])],()=>{evalQuests();ICON_CACHE.cheonghwa=null;if(bagOpen)renderBag()})},700);
+}
+function loadDisplay(){
+  if(!displayObj)return;
+  if(!prog.design){displayObj.spr=sprDisplay(null);return}
+  const im=new Image();im.onload=()=>{displayObj.spr=sprDisplay(im)};im.src=prog.design;
+}
+$('#dClose').onclick=closeDesign;
+
+/* ════════════════════════════════════════════════
+   8-4. 달항아리 만들기 (미니게임): 위아래 두 사발을 맞붙이기
+   ════════════════════════════════════════════════ */
+let jarOpen=false, jar=null, jarRAF=0;
+const JAR_STEPS=['아래 사발 빚기','위 사발 빚기','맞붙이기'];
+function openJar(){
+  jarOpen=true;for(const k in keys)delete keys[k];
+  jar={step:0,pos:0,dir:1,target:.45+Math.random()*.2,res:[],done:false,msg:'커서가 초록 칸에 왔을 때 Space(또는 버튼)를 눌러 아래 사발 크기를 정해요.'};
+  $('#jarUI').style.display='flex';jarLoop(performance.now());renderJarText();
+}
+function closeJar(){jarOpen=false;cancelAnimationFrame(jarRAF);$('#jarUI').style.display='none'}
+function renderJarText(){$('#jStep').textContent=jar.done?'결과':`${jar.step+1}/3 · ${JAR_STEPS[jar.step]}`;$('#jMsg').textContent=jar.msg;
+  $('#jHit').style.display=jar.done?'none':'';$('#jAgain').style.display=jar.done?'':'none'}
+let jarLastT=0;
+function jarLoop(t){
+  if(!jarOpen)return;const dt=Math.min(.05,(t-(jarLastT||t))/1000);jarLastT=t;
+  if(!jar.done){const sp=[.55,.75,.95][jar.step];jar.pos+=jar.dir*sp*dt;if(jar.pos>1){jar.pos=1;jar.dir=-1}if(jar.pos<0){jar.pos=0;jar.dir=1}}
+  drawJarGame();jarRAF=requestAnimationFrame(jarLoop);
+}
+function jarTarget(){return jar.step===0?jar.target:jar.step===1?jar.res[0]:.5}
+function jarHit(){
+  if(!jar)return;if(jar.done){openJar();return}
+  jar.res.push(jar.pos);
+  if(jar.step===0){jar.msg='이제 위 사발을 빚어요. 아래 사발과 크기가 꼭 같아야 잘 붙어요! (초록 칸 = 아래 사발 크기)'}
+  if(jar.step===1){jar.msg='두 사발을 맞붙여요. 위 사발이 한가운데 왔을 때 눌러요!'}
+  jar.step++;
+  if(jar.step>2){jar.done=true;
+    const e1=Math.abs(jar.res[0]-jar.target), e2=Math.abs(jar.res[1]-jar.res[0]), e3=Math.abs(jar.res[2]-.5);
+    jar.ok=e2<.07&&e3<.08;
+    if(!jar.ok)jar.msg=e2>=.07?'위아래 사발 크기가 달라서 이음새가 벌어졌어요. 다시 도전해 봐요!':'두 사발이 어긋나게 붙어서 금이 갔어요. 다시 도전해 봐요!';
+    else{const perfect=e1<.04&&e2<.025&&e3<.03;
+      jar.msg=perfect?'완벽해요! 보름달처럼 둥근 달항아리가 완성됐어요.':'성공! 살짝 비뚤지만, 그 자연스러움이 바로 달항아리의 멋이에요.';
+      if(!prog.flags.moonjar_made){prog.flags.moonjar_made=true;saveProg();setTimeout(evalQuests,600)}}
+  }
+  renderJarText();
+}
+function drawJarGame(){
+  const cv=$('#jCanvas'),x=cv.getContext('2d'),W=cv.width,H=cv.height;x.clearRect(0,0,W,H);
+  x.fillStyle='#e9e2cf';x.fillRect(0,0,W,H);x.fillStyle='#8a6236';x.fillRect(0,H-70,W,6);
+  const cx=W/2, base=H-76;
+  const wOf=v=>60+v*120; // 사발 반지름
+  const lower=(r,ox)=>{x.fillStyle='#f4f1e8';x.beginPath();x.ellipse(cx+ox,base-70,r,70,0,0,Math.PI);x.fill();x.strokeStyle='#cfc9bb';x.lineWidth=2;x.stroke();x.fillStyle='#e3ded2';x.fillRect(cx+ox-26,base-4,52,6)};
+  const upper=(r,ox,lift)=>{x.fillStyle='#f8f6ef';x.beginPath();x.ellipse(cx+ox,base-70-lift,r,70,0,Math.PI,Math.PI*2);x.fill();x.strokeStyle='#cfc9bb';x.lineWidth=2;x.stroke();x.fillStyle='#e3ded2';x.fillRect(cx+ox-22,base-146-lift,44,8)};
+  const r0=jar.res[0]!==undefined?wOf(jar.res[0]):wOf(jar.pos);
+  if(jar.step===0&&!jar.done){lower(wOf(jar.pos),0)}
+  else{lower(r0,0);
+    if(jar.step===1&&!jar.done)upper(wOf(jar.pos),0,40);
+    if(jar.step>=2||jar.done){const r1=wOf(jar.res[1]);const off=((jar.done?jar.res[2]:jar.pos)-.5)*200;upper(r1,off,jar.done?0:6);
+      if(jar.done&&!jar.ok){x.strokeStyle='#5a3a1e';x.lineWidth=2;x.beginPath();x.moveTo(cx-20,base-70);x.lineTo(cx-8,base-90);x.lineTo(cx+4,base-80);x.stroke()}}}
+  // 눈금 막대
+  const bx=40,bw=W-80,by=H-44;x.fillStyle='#3b4c78';x.fillRect(bx,by,bw,14);
+  if(!jar.done){const tg=jarTarget(),tw=jar.step===2?.08:jar.step===1?.07:.06;x.fillStyle='#5fbf5a';x.fillRect(bx+(tg-tw)*bw,by,tw*2*bw,14);
+    x.fillStyle='#f2c84b';x.fillRect(bx+jar.pos*bw-3,by-8,6,30)}
+  x.fillStyle='#2a1d10';x.font='14px Galmuri11, sans-serif';x.fillText(jar.done?(jar.ok?'★ 달항아리 완성 ★':'다시 해 볼까요?'):'초록 칸에 맞춰요',bx,by-12);
+}
+$('#jHit').onclick=()=>jarHit();$('#jAgain').onclick=()=>openJar();$('#jClose').onclick=closeJar;
+
+/* ════════════════════════════════════════════════
    9. 함께하기 (Supabase 실시간: 방 코드별 채널)
    방 코드는 실시간 퀴즈와 같은 quiz_rooms 표를 씁니다.
    ════════════════════════════════════════════════ */
@@ -1724,13 +2677,14 @@ async function roomExists(code){
 function cleanLook(l){
   const o={};l=l&&typeof l==='object'?l:{};
   for(const [k,opt] of Object.entries(OPT))o[k]=opt.items.some(i=>i[0]===l[k])?l[k]:DEFAULT_LOOK[k];
-  o.hand=['brush','palette','hammer'].includes(l.hand)?l.hand:'none';
+  o.hand=['brush','palette','hammer','bamboo','gyeomjae','hol'].includes(l.hand)?l.hand:'none';
+  o.back=l.back==='shell'?'shell':'none';
   o.neck=l.neck==='medal'?'medal':'none';
   o.head=l.head==='eosahwa'?'eosahwa':'none';
   return o;
 }
 function cleanName(n){return (String(n||'').trim().slice(0,8))||'친구'}
-function lookToSend(){const o={};const g=gearLook();for(const k of Object.keys(OPT))o[k]=look[k];o.hand=g.hand;o.neck=g.neck;o.head=g.head;return o}
+function lookToSend(){const o={};const g=gearLook();for(const k of Object.keys(OPT))o[k]=look[k];o.hand=g.hand;o.neck=g.neck;o.head=g.head;o.back=g.back;return o}
 
 function joinRoom(code){
   leaveRoom();net.room=code;net.ok=false;updRoomHud();
@@ -1794,17 +2748,19 @@ function applyMove(o,p){
   o.tx=Math.max(0,Math.min(MW*T,x));o.ty=Math.max(0,Math.min(MH*T,y));
   if(DIRS.includes(p.d))o.dir=p.d;
   o.moving=!!p.m;
-  if(!o.seen){o.x=o.tx;o.y=o.ty;o.seen=true}
+  const mp=typeof p.mp==='string'&&MAPS[p.mp]?p.mp:'early';
+  if(!o.seen||o.map!==mp){o.x=o.tx;o.y=o.ty;o.seen=true}
+  o.map=mp;
 }
 function sendPos(force){
   if(!net.ch||!net.ok)return;
-  const now=performance.now(), state=`${Math.round(player.x)},${Math.round(player.y)},${player.dir},${player.moving?1:0}`;
+  const now=performance.now(), state=`${MAP&&MAP.id},${Math.round(player.x)},${Math.round(player.y)},${player.dir},${player.moving?1:0}`;
   if(!force){
     if(now-net.lastSend<100)return;
     if(state===net.lastState&&now-net.lastSend<2000)return;
   }
   net.lastSend=now;net.lastState=state;
-  net.ch.send({type:'broadcast',event:'mv',payload:{id:myId,x:Math.round(player.x),y:Math.round(player.y),d:player.dir,m:player.moving?1:0}}).catch(()=>{});
+  net.ch.send({type:'broadcast',event:'mv',payload:{id:myId,x:Math.round(player.x),y:Math.round(player.y),d:player.dir,m:player.moving?1:0,mp:MAP?MAP.id:'early'}}).catch(()=>{});
 }
 
 // 선생님: 방 만들기
@@ -1835,7 +2791,7 @@ try{const q=new URLSearchParams(location.search).get('room');if(q&&/^\d{4}$/.tes
 addEventListener('beforeunload',leaveRoom);
 
 /* ── 시작 ── */
-buildVillage();
+
 drawStars();buildOptions();refresh();updDirName();requestAnimationFrame(createLoop);
 </script>
 </body>
