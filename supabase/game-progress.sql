@@ -87,7 +87,7 @@ begin
   if not found then raise exception '그 이름의 학생이 없어요'; end if;
 end $$;
 
-revoke all on function public.game_teacher_ok(text) from public;
+revoke all on function public.game_teacher_ok(text) from public, anon, authenticated;
 grant execute on function public.game_load(text, text) to anon, authenticated;
 grant execute on function public.game_save(text, text, jsonb, jsonb, text) to anon, authenticated;
 grant execute on function public.game_progress_list(text, text) to anon, authenticated;
