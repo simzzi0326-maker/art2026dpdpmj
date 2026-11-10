@@ -1419,7 +1419,7 @@ function buildEarly(m){
   place(sprSungnyemun(),55,25,{x:55*T+8,label:'숭례문',mm:[50,20,11,6]});block(50,21,60,25);
   place(sprCityWall(),47,25,{x:47*T+8});block(45,24,49,25);
   PLACES.push({x0:52,y0:26,x1:58,y1:26,key:'sungnyemun'});
-  portal(63,26,63,30,'middle',1.6,28,'right');
+  portal(63,26,63,30,'middle',1.6*T,28*T,'right');
   // 몽유도원 가는 길
   place(sprSign(),33,25);block(33,25,33,25);PLACES.push({x0:33,y0:25,x1:33,y1:25,key:'dowon_gate',any:true});
   const rr=mulberry32(9);let cnt=0;
@@ -1506,7 +1506,7 @@ function buildMiddle(m){
       '조선 사람들은 티 없이 하얀 백자를 사랑했소. 깨끗하고 검소한 선비의 마음과 닮았기 때문이지.',
       '하얀 바탕에 코발트 안료로 푸른 그림을 그린 것을 청화백자라 하오. 다만 이 안료는 먼 나라에서 들여와 무척 귀했지.'],
       'baekja_shop',['자, 귀한 청화 안료를 내어 주겠소. 그대만의 청화백자를 꾸며 보시오!'],()=>{if(prog.quiz.baekja_shop)openDesign()})});
-  portal(0,26,0,30,'early',62.4,28,'left');portal(63,24,63,28,'late',1.6,30,'right');
+  portal(0,26,0,30,'early',62.4*T,28*T,'left');portal(63,24,63,28,'late',1.6*T,30*T,'right');
   forest(['pine','round','bamboo','pine'],7);
   scatter(14,[i=>treeSpr(i%2?'pine':'plum',i),i=>sprBush(i*7),i=>sprRock(i+3)],6);
   scatterAnimals(['cat','rabbit','dog'],5,33);
@@ -1593,7 +1593,7 @@ function buildLate(m){
   portal(11,47,13,48,'dano',20*T+8,25*T,'up');
   place(sprGateSsireum(),26,48,{x:26*T+8,label:'김홍도 「씨름」 가는 길',mm:[24,45,5,3]});block(23,47,24,48);block(28,47,29,48);
   portal(25,47,27,48,'ssireum',15*T+8,21*T,'up');
-  portal(0,28,0,32,'middle',62.4,26,'left');
+  portal(0,28,0,32,'middle',62.4*T,26*T,'left');
   forest(['pine','round','pine'],9);
   scatter(14,[i=>treeSpr(i%2?'pine':'round',i),i=>sprBush(i*5),i=>sprRock(i+7)],8);
   scatterAnimals(['dog','rabbit','cat'],5,41);
@@ -1997,7 +1997,7 @@ function update(dt){
   // 다른 지도로 가는 길
   if(!switching){const tx=Math.floor(player.x/T), ty=Math.floor((player.y-3)/T);
     for(const p of PORTALS)if(tx>=p.x0&&tx<=p.x1&&ty>=p.y0&&ty<=p.y1){
-      const tx2=p.tx>200?p.tx:p.tx*T, ty2=p.ty>200?p.ty:p.ty*T;enterMap(p.to,tx2,ty2,p.dir);break}}
+      enterMap(p.to,p.tx,p.ty,p.dir);break}}  // 도착 위치는 언제나 픽셀 단위
   waterT+=dt;
   // 따라오는 애완동물
   const last=trail[trail.length-1];
